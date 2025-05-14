@@ -46,6 +46,3 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["dll_etl"]
-[tool.hatch.version]
-source = "regex"
-path = 'dll_etl\ntfy_lite\__init__.py'
