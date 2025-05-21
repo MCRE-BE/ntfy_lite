@@ -128,9 +128,10 @@ class NtfyHandler(logging.Handler):
         except KeyError:
             tags = ()
         try:
+            title = record.extra.get("logger_name") if hasattr(record, "extra") is not None else record.name
             push(
-                self._topic,
-                record.name,
+                topic=self._topic,
+                title=title,
                 message=message,
                 priority=self._level2priority[record.levelno],
                 tags=tags,
