@@ -1,5 +1,6 @@
 """Module defining the push method, which send a message or the content of a file to an NTFY channel."""
 
+import time
 import traceback
 import typing
 from enum import Enum, auto
@@ -24,7 +25,11 @@ class _DataManager:
     (if data is a file).
     """
 
-    def __init__(self, message: typing.Optional[str], filepath: typing.Optional[Path]) -> None:
+    def __init__(
+        self,
+        message: str | None,
+        filepath: Path | None,
+    ) -> None:
         # checking the user is at least pushing a message
         # or a file attachment
         if not any((message, filepath)):
@@ -80,17 +85,17 @@ class DryRun(Enum):
 def push(
     topic: str,
     title: str,
-    message: typing.Optional[str] = None,
+    message: str | None = None,
     priority: Priority = Priority.DEFAULT,
     tags: typing.Union[str, typing.Iterable[str]] = [],
-    click: typing.Optional[str] = None,
-    email: typing.Optional[str] = None,
-    filepath: typing.Optional[Path] = None,
-    attach: typing.Optional[str] = None,
-    icon: typing.Optional[str] = None,
+    click: str | None = None,
+    email: str | None = None,
+    filepath: Path | None = None,
+    attach: str | None = None,
+    icon: str | None = None,
     actions: typing.Union[Action, typing.Sequence[Action]] = (),
-    at: typing.Optional[str] = None,
-    url: typing.Optional[str] = "https://ntfy.sh",
+    at: str | None = None,
+    url: str | None = "https://ntfy.sh",
     dry_run: DryRun = DryRun.off,
 ) -> None:
     """
@@ -172,6 +177,13 @@ def push(
         if dry_run == DryRun.off:
             response = requests.put(f"{url}/{topic}", data=data, headers=headers)
             if not response.ok:
-                raise NtfyError(response.status_code, response.reason)
+                # If the issue is NOT linked to "too many requests", fail.
+                if int(response.status_code) != 429:
+                    raise NtfyError(response.status_code, response.reason)
+                # Else, retry a second time after 60 seconds.
+                time.sleep(60)
+                response = requests.put(f"{url}/{topic}", data=data, headers=headers)
+                if not response.ok:
+                    raise NtfyError(response.status_code, response.reason)
         elif dry_run == DryRun.error:
             raise NtfyError(-1, "DryRun.error passed as argument")
