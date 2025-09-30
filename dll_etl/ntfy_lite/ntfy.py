@@ -49,7 +49,7 @@ class _DataManager:
         # or the str corresponding to message
         self._data: typing.Union[typing.IO, str]
         if filepath is not None:
-            self._data = open(filepath, "rb")  # noqa
+            self._data = open(filepath, "rb")  # noqa: SIM115
         elif message is not None and isinstance(message, str):
             self._data = message.encode(encoding="latin-1", errors="replace").decode(encoding="latin-1")
         elif message is not None and not isinstance(message, str):
