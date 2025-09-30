@@ -92,7 +92,7 @@ class NtfyHandler(logging.Handler):
             if logging_level not in self._level2priority:
                 raise ValueError(
                     f"NtfyHandler, level2priority argument: missing mapping from "
-                    f"logging level {logging_level} to ntfy priority level"
+                    f"logging level {logging_level} to ntfy priority level",
                 )
 
     def _is_new_record(self, record: logging.LogRecord) -> bool:
