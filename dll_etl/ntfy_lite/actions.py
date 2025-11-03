@@ -1,4 +1,3 @@
-# ruff : noqa: D105
 """Module defining the Action class as well as it subclasses.
 
 - ViewAction
@@ -107,8 +106,8 @@ class HttpAction(Action):
         url: str,
         clear: bool = False,
         method: HttpMethod = HttpMethod.GET,
-        headers: typing.Optional[typing.Mapping[str, str]] = None,
-        body: typing.Optional[str] = None,
+        headers: typing.Mapping[str, str] | None = None,
+        body: str | None = None,
     ):
         super().__init__("http", label, url, clear)
         self.method = method.value

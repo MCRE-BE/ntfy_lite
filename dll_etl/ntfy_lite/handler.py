@@ -44,11 +44,11 @@ class NtfyHandler(logging.Handler):
         topic: str,
         url: str = "https://ntfy.sh",
         twice_in_a_row: bool = True,
-        error_callback: typing.Optional[typing.Callable[[Exception], typing.Any]] = None,
-        level2tags: typing.Dict[LoggingLevel, typing.Tuple[str, ...]] = level2tags,
-        level2priority: typing.Dict[LoggingLevel, Priority] = level2priority,
-        level2filepath: typing.Dict[LoggingLevel, Path] = None,
-        level2email: typing.Dict[LoggingLevel, str] = None,
+        error_callback: typing.Callable[[Exception], typing.Any] | None = None,
+        level2tags: dict[LoggingLevel, tuple[str, ...]] = level2tags,
+        level2priority: dict[LoggingLevel, Priority] = level2priority,
+        level2filepath: dict[LoggingLevel, Path] | None = None,
+        level2email: dict[LoggingLevel, str] | None = None,
         dry_run: DryRun = DryRun.off,
     ):
         """Start.
@@ -79,7 +79,7 @@ class NtfyHandler(logging.Handler):
         super().__init__()
         self._url = url
         self._topic = topic
-        self._last_messages: typing.Optional[typing.Dict[str, str]]
+        self._last_messages: dict[str, str] | None
         self._last_messages = None if twice_in_a_row else {}
         self._level2tags = level2tags
         self._level2priority = level2priority
