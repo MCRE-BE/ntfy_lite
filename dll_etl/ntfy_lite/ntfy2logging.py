@@ -9,8 +9,8 @@ import logging
 import typing
 from enum import Enum
 
-LoggingLevel = typing.Literal[  # type: ignore
-    logging.DEBUG,  # type: ignore
+LoggingLevel = typing.Literal[
+    logging.DEBUG,
     logging.INFO,
     logging.NOTSET,
     logging.WARNING,

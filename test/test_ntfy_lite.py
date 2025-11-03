@@ -1,4 +1,4 @@
-# ruff: noqa: D100, D103, PLW0603
+# ruff: noqa: ANN201, S101, ARG001, PLW0603, PT011
 """Tests."""
 
 ####################
@@ -9,9 +9,8 @@ import tempfile
 import typing
 from pathlib import Path
 
-import pytest
-
 import dll_etl.ntfy_lite as ntfy
+import pytest
 
 
 ####################
@@ -214,7 +213,7 @@ def test_handler(
     global _callback_called
     _callback_called = False
 
-    def _callback(e: Exception):
+    def _callback(e: Exception) -> None:
         global _callback_called
         _callback_called = True
 
@@ -226,7 +225,7 @@ def test_handler(
         with open(filepath, "w") as f:
             f.write("test content")
 
-        level2tags: typing.Dict[ntfy.LoggingLevel, typing.Tuple[str, ...]] = {
+        level2tags: typing.Dict[ntfy.LoggingLevel, tuple[str, ...]] = {
             logging.ERROR: ("broken_heart",),
         }
 
@@ -261,6 +260,5 @@ def test_handler(
 
     if not use_callback:
         assert not _callback_called
-    else:
-        if dry_run == ntfy.DryRun.on or dry_run == ntfy.DryRun.error:
-            assert _callback_called
+    elif dry_run in (ntfy.DryRun.on, ntfy.DryRun.error):
+        assert _callback_called

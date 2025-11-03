@@ -175,14 +175,14 @@ def push(
 
         # sending
         if dry_run == DryRun.off:
-            response = requests.put(f"{url}/{topic}", data=data, headers=headers)
+            response = requests.put(f"{url}/{topic}", data=data, headers=headers, timeout=10)
             if not response.ok:
                 # If the issue is NOT linked to "too many requests", fail.
                 if int(response.status_code) != 429:
                     raise NtfyError(response.status_code, response.reason)
                 # Else, retry a second time after 60 seconds.
                 time.sleep(60)
-                response = requests.put(f"{url}/{topic}", data=data, headers=headers)
+                response = requests.put(f"{url}/{topic}", data=data, headers=headers, timeout=10)
                 if not response.ok:
                     raise NtfyError(response.status_code, response.reason)
         elif dry_run == DryRun.error:
