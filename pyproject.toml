@@ -2,7 +2,7 @@
 # PROJECT #
 ###########
 [project]
-version = "1.0.4"
+version = "2.0.0"
 name = "dll_etl-ntfy_lite"
 description = "minimalistic python API for sending ntfy notifications"
 authors = [
