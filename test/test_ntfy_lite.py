@@ -9,9 +9,8 @@ import tempfile
 import typing
 from pathlib import Path
 
-import pytest
-
 import dll_etl.ntfy_lite as ntfy
+import pytest
 
 
 ####################
