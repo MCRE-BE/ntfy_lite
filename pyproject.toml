@@ -9,7 +9,7 @@ authors = [
       {name = "Vincent Berenz", email = "vberenz@tuebingen.mpg.de"},
       { name = "Mathias Creemers", email = "mcreemers3@delhaize.be" }
 ]
-requires-python = ">=3.11"
+requires-python = ">= 3.13"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
