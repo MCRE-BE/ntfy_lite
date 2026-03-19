@@ -28,7 +28,6 @@ dependencies = [ "requests>=2.28.2,<3", "validators>=0.20,<1" ]
 [dependency-groups]
 dev = [
   "basedpyright>0",
-  "poethepoet>0",
   "pytest>0",
   "ruff>0",
 ]
