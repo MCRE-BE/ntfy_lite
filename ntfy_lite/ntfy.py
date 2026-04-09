@@ -12,7 +12,10 @@ from pathlib import Path
 import requests
 
 from .actions import Action
-from .buffer import NtfyBuffer
+try:
+    from .buffer import NtfyBuffer
+except ImportError:
+    NtfyBuffer = typing.Any
 from .error import NtfyError
 from .ntfy2logging import Priority
 from .utils import validate_url
