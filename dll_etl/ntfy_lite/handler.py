@@ -151,6 +151,7 @@ class NtfyHandler(logging.Handler):
                 buffer=self._buffer,
             )
         except Exception as e:
+            logging.exception("NTFY Log Handler failed")
             if self._error_callback is not None:
                 self._error_callback(e)
             self.handleError(record)
