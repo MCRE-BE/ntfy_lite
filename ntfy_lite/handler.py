@@ -29,7 +29,13 @@ import logging
 import typing
 from pathlib import Path
 
-from .buffer import NtfyBuffer
+import warnings
+try:
+    from .buffer import NtfyBuffer
+    _HAS_BUFFER = True
+except ImportError:
+    _HAS_BUFFER = False
+
 from .defaults import level2tags
 from .ntfy import DryRun, push
 from .ntfy2logging import LoggingLevel, Priority, level2priority
@@ -92,10 +98,22 @@ class NtfyHandler(logging.Handler):
         self._level2tags = level2tags
         self._level2priority = level2priority
         self._level2filepath = level2filepath
-        self._level2email = level2email
         self._error_callback = error_callback
         self._dry_run = dry_run
-        self._buffer = NtfyBuffer(db_path) if db_path is not None else None
+        self._twice_in_a_row = twice_in_a_row
+
+        self._buffer = None
+        if db_path is not None:
+            if _HAS_BUFFER:
+                self._buffer = NtfyBuffer(db_path)
+            else:
+                msg = (
+                    "Buffering requested (db_path provided) but 'pysqlite3' is not installed. "
+                    "Run 'pip install ntfy_lite[buffer]' to enable this feature. "
+                    "Buffering will be disabled."
+                )
+                warnings.warn(msg, UserWarning)
+                logging.info(msg)
 
         for logging_level in level2priority:
             if logging_level not in self._level2priority:
