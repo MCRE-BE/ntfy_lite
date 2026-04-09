@@ -8,12 +8,21 @@
 
 It comes with a **Handler** for the [logging package](https://docs.python.org/3/library/logging.html).
 
-See the original documentation [here](https://mpi-is.github.io/ntfy_lite/).
-See the original source [here](https://github.com/MPI-IS/ntfy_lite).
+This fork contains significant enhancements to better handle high-volume notification traffic and modern Python environments.
 
-This fork only contains some small modifications to better work with my projects.
+## Fork Improvements
+
+Compared to the original `ntfy_lite`, this version introduces:
+
+- **Asynchronous Buffering**: Integrated SQLite-based persistence (`NtfyBuffer`). When the NTFY server returns an HTTP 429 "Too Many Requests" error, the message is automatically buffered locally and retried in the background using a dedicated daemon thread.
+- **Improved Logging Handler**: The `NtfyHandler` now supports non-blocking delivery when configured with a `buffer_path`.
+- **Modernized Codebase**: Support for Python 3.13+, improved typing using modern PEP standards, and a modernized build system (Hatch).
+- **Code Quality**: Integrated `ruff` for consistent style and linting.
+
+Original project documentation can be found [here](https://mpi-is.github.io/ntfy_lite/), and the original source is available [here](https://github.com/MPI-IS/ntfy_lite).
 
 ## Installation
+
 
 from source:
 
