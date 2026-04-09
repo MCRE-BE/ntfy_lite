@@ -318,3 +318,28 @@ def test_rate_limit_buffering_and_logging(monkeypatch, tmp_path):
         assert len(rows) > 0, "Expected buffered message in SQLite database."
         # Clean up
         conn.execute("DELETE FROM buffer WHERE topic = ?", (topic,))
+
+def test_handler_default_db_path(monkeypatch, tmp_path):
+    import os
+    from pathlib import Path
+
+    home_dir = tmp_path / "home"
+    home_dir.mkdir()
+    monkeypatch.setattr(Path, "home", lambda: home_dir)
+
+    # Ensure environment is clear
+    monkeypatch.delenv("NTFY_LITE_DISABLE_BUFFER", raising=False)
+
+    handler = ntfy.NtfyHandler("test_topic", twice_in_a_row=False)
+    assert handler._buffer is not None
+    assert handler._buffer.db_path == home_dir / ".ntify" / "ntfy_buffer.sqlite"
+
+def test_handler_disable_db_path_arg(monkeypatch):
+    monkeypatch.delenv("NTFY_LITE_DISABLE_BUFFER", raising=False)
+    handler = ntfy.NtfyHandler("test_topic", db_path=False)
+    assert handler._buffer is None
+
+def test_handler_disable_db_path_env(monkeypatch):
+    monkeypatch.setenv("NTFY_LITE_DISABLE_BUFFER", "1")
+    handler = ntfy.NtfyHandler("test_topic")
+    assert handler._buffer is None

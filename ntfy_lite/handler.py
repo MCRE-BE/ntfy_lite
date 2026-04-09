@@ -26,6 +26,7 @@ logging.basicConfig(
 # Import Statement #
 ####################
 import logging
+import os
 import typing
 from pathlib import Path
 
@@ -63,7 +64,7 @@ class NtfyHandler(logging.Handler):
         level2filepath: dict[LoggingLevel, Path] | None = None,
         level2email: dict[LoggingLevel, str] | None = None,
         dry_run: DryRun = DryRun.off,
-        db_path: Path | None = None,
+        db_path: Path | str | bool | None = None,
     ):
         """Start.
 
@@ -104,12 +105,24 @@ class NtfyHandler(logging.Handler):
         self._twice_in_a_row = twice_in_a_row
 
         self._buffer = None
-        if db_path is not None:
+
+        disable_buffer_env = os.environ.get("NTFY_LITE_DISABLE_BUFFER", "0").lower() in ("1", "true")
+
+        if db_path is not False and not disable_buffer_env:
+            if db_path is None or db_path is True:
+                db_path = Path.home() / ".ntify" / "ntfy_buffer.sqlite"
+            elif isinstance(db_path, str):
+                db_path = Path(db_path)
+
             if _HAS_BUFFER:
+                try:
+                    db_path.parent.mkdir(parents=True, exist_ok=True)
+                except Exception:
+                    pass
                 self._buffer = NtfyBuffer(db_path)
             else:
                 msg = (
-                    "Buffering requested (db_path provided) but 'pysqlite3' is not installed. "
+                    "Buffering requested (db_path provided or default) but 'pysqlite3' or 'sqlite3' is not available. "
                     "Run 'pip install ntfy_lite[buffer]' to enable this feature. "
                     "Buffering will be disabled."
                 )
