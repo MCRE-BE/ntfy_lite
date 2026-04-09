@@ -41,6 +41,8 @@ dev = [
   "basedpyright>0",
   "pytest>0",
   "ruff>0",
+]
+docs = [
   "zensical",
 ]
 
