@@ -23,7 +23,11 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
 ]
-dependencies = [ "requests>=2.28.2,<3", "validators>=0.20,<1" ]
+dependencies = [
+  "requests>=2.28.2,<3",
+  "validators>=0.20,<1",
+  "pysqlite3",
+]
 
 [dependency-groups]
 dev = [
