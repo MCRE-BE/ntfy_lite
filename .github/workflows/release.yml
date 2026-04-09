@@ -2,8 +2,11 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - master
+    paths:
+      - "pyproject.toml"
+  workflow_dispatch:
 
 permissions:
   contents: write
