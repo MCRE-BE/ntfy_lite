@@ -243,7 +243,7 @@ test = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "ntfy-lite", extra = ["dev", "docs", "test"] },
+    { name = "ntfy-lite", extra = ["dev", "docs"] },
 ]
 
 [package.metadata]
@@ -262,7 +262,7 @@ requires-dist = [
 provides-extras = ["buffer", "dev", "test", "docs"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "ntfy-lite", extras = ["dev", "docs", "test"] }]
+dev = [{ name = "ntfy-lite", extras = ["dev", "docs"] }]
 
 [[package]]
 name = "packaging"
