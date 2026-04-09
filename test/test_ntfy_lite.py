@@ -5,12 +5,14 @@
 # IMPORT STATEMENT #
 ####################
 import logging
+import sqlite3
 import tempfile
 import typing
 from pathlib import Path
 
 import dll_etl.ntfy_lite as ntfy
 import pytest
+from dll_etl.ntfy_lite.buffer import NtfyBuffer
 
 
 ####################
@@ -262,3 +264,57 @@ def test_handler(
         assert not _callback_called
     elif dry_run in (ntfy.DryRun.on, ntfy.DryRun.error):
         assert _callback_called
+
+
+def test_rate_limit_buffering_and_logging(monkeypatch, tmp_path):
+    """Test that HTTP 429 triggers buffering and logs via loguru."""
+
+    # --- Classes ---
+    class MockResponse:
+        ok = False
+        status_code = 429
+        reason = "Too Many Requests"
+
+    class ListHandler(logging.Handler):
+        def emit(self, record) -> None:
+            logs.append(self.format(record))
+
+    # --- Functions ---
+    def mock_put(*args, **kwargs) -> MockResponse:
+        return MockResponse()
+
+    # --- Variables ---
+    monkeypatch.setattr("requests.put", mock_put)
+
+    logs = []
+    test_handler = ListHandler()
+    logger = logging.getLogger()
+    logger.addHandler(test_handler)
+
+    topic = "ntfy_test_rate_limit"
+    title = "Test 429"
+    message = "Rate limit test message"
+
+    db_path = tmp_path / "ntfy_buffer.sqlite"
+    buffer = NtfyBuffer(db_path)
+
+    # --- Script ---
+    ntfy.push(
+        topic,
+        title,
+        message=message,
+        dry_run=ntfy.DryRun.off,
+        buffer=buffer,
+    )
+
+    logger.removeHandler(test_handler)
+    assert any("NTFY rate limit exceeded (HTTP 429)" in log for log in logs), "Expected rate limit warning in logs."
+
+    # Verify that the SQLite buffer has been updated
+    with sqlite3.connect(str(db_path)) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, topic FROM buffer WHERE topic = ?", (topic,))
+        rows = cursor.fetchall()
+        assert len(rows) > 0, "Expected buffered message in SQLite database."
+        # Clean up
+        conn.execute("DELETE FROM buffer WHERE topic = ?", (topic,))
