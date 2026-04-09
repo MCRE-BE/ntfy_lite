@@ -1,0 +1,39 @@
+- name: feature
+  description: Addition of a new feature to the code base
+  color: 0e8a16
+- name: bug/fix
+  description: Something isn't working
+  color: b60205
+- name: documentation
+  description: Improvements or additions to documentation
+  color: 1d76db
+- name: style
+  description: Changes that do not affect the meaning of the code (white-space, formatting)
+  color: e99695
+- name: performance
+  description: A code change that improves performance
+  color: 006b75
+- name: test
+  description: Adding or correcting tests
+  color: 5319e7
+- name: build
+  description: Changes that affect the build system or external dependencies.
+  color: d4c5f9
+- name: ci
+  description: Changes to our CI configuration files and scripts.
+  color: c5def5
+- name: refactoring
+  description: Code refactoring
+  color: 0fbca042
+- name: chore
+  description: Small changes that don't add or remove features
+  color: 0052cc
+- name: revert
+  description: Revert a previous commit
+  color: d93f0b
+- name: dependencies
+  description: Update dependencies.
+  color: d93f0b
+- name: github_actions
+  description: Dependabot updates for github actions
+  color: d93f0b
