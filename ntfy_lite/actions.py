@@ -5,6 +5,11 @@
 """
 
 import typing
+import sys
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 from enum import Enum, auto
 
 from .utils import validate_url
@@ -52,14 +57,14 @@ class ViewAction(Action):
     """
 
     def __init__(
-        self: typing.Self,
+        self: Self,
         label: str,
         url: str,
         clear: bool = False,
     ) -> None:
         super().__init__("view", label, url, clear)
 
-    def __str__(self: typing.Self) -> str:
+    def __str__(self: Self) -> str:
         _attrs = ("label", "url", "clear")
         return self._str(_attrs)
 
