@@ -1,0 +1,48 @@
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # Adds labels to the PRs for easier filtering
+    labels:
+      - "dependencies"
+    # Prefixes commit messages (useful for Conventional Commits)
+    commit-message:
+      prefix: "chore(deps)"
+    # Group all uv dependency updates into a single PR
+    groups:
+      all-uv:
+        patterns: [ "*" ]
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "16:00"
+    # Adds labels to the PRs for easier filtering
+    labels:
+      - "dependencies"
+    # Prefixes commit messages (useful for Conventional Commits)
+    commit-message:
+      prefix: "chore(deps)"
+    # Group all pip dependency updates into a single PR
+    groups:
+      all-pip:
+        patterns: [ "*" ]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "16:00"
+    labels:
+      - "dependencies"
+      - "github_actions"
+    commit-message:
+      prefix: "chore(actions)"
+    groups:
+      all-actions:
+        patterns: [ "*" ]
