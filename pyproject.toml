@@ -7,7 +7,7 @@ requires = [ "hatchling" ]
 ## #########
 [project]
 name = "dll-etl-ntfy-lite"
-version = "2.0.0"
+version = "2.0.1"
 description = "minimalistic python API for sending ntfy notifications"
 readme = "README.md"
 license-files = [ "LICENSE" ]
