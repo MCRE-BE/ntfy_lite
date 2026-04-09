@@ -1,12 +1,11 @@
-"""
-Module defining the function 'validate_url'.
-"""
-import typing
+"""Module defining the function 'validate_url'."""
+
 import validators
 
 
-def validate_url(attribute: str, value: typing.Optional[str]) -> None:
-    """
+def validate_url(attribute: str, value: str | None) -> None:
+    """Validate URL.
+
     Return None if value is a valid URL or is None,
     raises a ValueError otherwise.
 

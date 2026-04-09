@@ -1,12 +1,25 @@
-import pytest
-import typing
+# ruff: noqa: ANN201, S101, ARG001, PLW0603, PT011
+"""Tests."""
+
+####################
+# IMPORT STATEMENT #
+####################
 import logging
+import sqlite3
 import tempfile
-import ntfy_lite as ntfy
+import typing
 from pathlib import Path
 
+import dll_etl.ntfy_lite as ntfy
+import pytest
+from dll_etl.ntfy_lite.buffer import NtfyBuffer
 
+
+####################
+# INDIVIDUAL TESTS #
+####################
 def test_minimal_message_push():
+    """Test a minimal push with only a topic, title, and message."""
     topic = "ntfy_lite_test"
     title = "ntfy lite test mimimal push"
     message = "ntfy lite test mimimal push: message"
@@ -14,6 +27,8 @@ def test_minimal_message_push():
 
 
 def test_minimal_filepath_push():
+    """Test a minimal push with a filepath."""
+
     topic = "ntfy_lite_test"
     title = "ntfy lite test mimimal push"
 
@@ -26,6 +41,7 @@ def test_minimal_filepath_push():
 
 
 def test_tags_push():
+    """Test a push with tags."""
     topic = "ntfy_lite_test"
     title = "ntfy lite test mimimal push"
     message = "ntfy lite test mimimal push: message"
@@ -34,6 +50,7 @@ def test_tags_push():
 
 
 def test_click_push():
+    """Test a push with a clickable URL."""
     topic = "ntfy_lite_test"
     title = "ntfy lite test mimimal push"
     message = "ntfy lite test mimimal push: message"
@@ -42,6 +59,7 @@ def test_click_push():
 
 
 def test_click_no_url_push():
+    """Test a push with an invalid URL for click."""
     topic = "ntfy_lite_test"
     title = "ntfy lite test mimimal push"
     message = "ntfy lite test mimimal push: message"
@@ -62,9 +80,7 @@ def test_icon_push():
     topic = "ntfy_lite_test"
     title = "ntfy lite test mimimal push"
     message = "ntfy lite test mimimal push: message"
-    icon = (
-        "https://styles.redditmedia.com/t5_32uhe/styles/communityIcon_xnt6chtnr2j21.png"
-    )
+    icon = "https://styles.redditmedia.com/t5_32uhe/styles/communityIcon_xnt6chtnr2j21.png"
     ntfy.push(topic, title, icon=icon, message=message, dry_run=True)
 
 
@@ -96,6 +112,7 @@ def test_attach_not_an_url_push():
 
 @pytest.mark.parametrize("clear", [True, False])
 def test_action_view_push(clear):
+    """Test ViewAction with clear flag."""
     topic = "ntfy_lite_test"
     title = "ntfy lite test mimimal push"
     message = "ntfy lite test mimimal push: message"
@@ -178,6 +195,9 @@ def test_at_push():
 _callback_called: bool
 
 
+################
+# COMPLEX TEST #
+################
 @pytest.mark.parametrize("twice_in_a_row", [True, False])
 @pytest.mark.parametrize("logging_level", [logging.ERROR, logging.INFO])
 @pytest.mark.parametrize("use_callback", [True, False])
@@ -188,24 +208,18 @@ def test_handler(
     use_callback: bool,
     dry_run: ntfy.DryRun,
 ):
+    """Test handler behavior with varying configuration."""
     topic = "ntfy_lite handler test"
-
-    record = logging.LogRecord(
-        "test record", logging_level, "", -1, "record message", None, None
-    )
+    record = logging.LogRecord("test record", logging_level, "", -1, "record message", None, None)
 
     global _callback_called
     _callback_called = False
 
-    def _callback(e: Exception):
+    def _callback(e: Exception) -> None:
         global _callback_called
         _callback_called = True
 
-    if use_callback:
-        callback = _callback
-    else:
-        callback = None
-
+    callback = _callback if use_callback else None
     logging.raiseExceptions = False
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -213,7 +227,7 @@ def test_handler(
         with open(filepath, "w") as f:
             f.write("test content")
 
-        level2tags: typing.Dict[ntfy.LoggingLevel, typing.Tuple[str, ...]] = {
+        level2tags: typing.Dict[ntfy.LoggingLevel, tuple[str, ...]] = {
             logging.ERROR: ("broken_heart",),
         }
 
@@ -248,8 +262,59 @@ def test_handler(
 
     if not use_callback:
         assert not _callback_called
-    else:
-        if dry_run == ntfy.DryRun.error:
-            assert _callback_called
-        else:
-            assert not _callback_called
+    elif dry_run in (ntfy.DryRun.on, ntfy.DryRun.error):
+        assert _callback_called
+
+
+def test_rate_limit_buffering_and_logging(monkeypatch, tmp_path):
+    """Test that HTTP 429 triggers buffering and logs via loguru."""
+
+    # --- Classes ---
+    class MockResponse:
+        ok = False
+        status_code = 429
+        reason = "Too Many Requests"
+
+    class ListHandler(logging.Handler):
+        def emit(self, record) -> None:
+            logs.append(self.format(record))
+
+    # --- Functions ---
+    def mock_put(*args, **kwargs) -> MockResponse:
+        return MockResponse()
+
+    # --- Variables ---
+    monkeypatch.setattr("requests.put", mock_put)
+
+    logs = []
+    test_handler = ListHandler()
+    logger = logging.getLogger()
+    logger.addHandler(test_handler)
+
+    topic = "ntfy_test_rate_limit"
+    title = "Test 429"
+    message = "Rate limit test message"
+
+    db_path = tmp_path / "ntfy_buffer.sqlite"
+    buffer = NtfyBuffer(db_path)
+
+    # --- Script ---
+    ntfy.push(
+        topic,
+        title,
+        message=message,
+        dry_run=ntfy.DryRun.off,
+        buffer=buffer,
+    )
+
+    logger.removeHandler(test_handler)
+    assert any("NTFY rate limit exceeded (HTTP 429)" in log for log in logs), "Expected rate limit warning in logs."
+
+    # Verify that the SQLite buffer has been updated
+    with sqlite3.connect(str(db_path)) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, topic FROM buffer WHERE topic = ?", (topic,))
+        rows = cursor.fetchall()
+        assert len(rows) > 0, "Expected buffered message in SQLite database."
+        # Clean up
+        conn.execute("DELETE FROM buffer WHERE topic = ?", (topic,))

@@ -1,17 +1,16 @@
-"""
-Module defining:
+"""Module defining.
 
 - LoggingLevel: typing union of all logging levels
 - Priority: enumeration over ntfy priority levels
 - level2priority: default mapping between logging levels and ntfy priority levels
 """
 
-from enum import Enum
-import typing
 import logging
+import typing
+from enum import Enum
 
-LoggingLevel = typing.Literal[  # type: ignore
-    logging.DEBUG,  # type: ignore
+LoggingLevel = typing.Literal[
+    logging.DEBUG,
     logging.INFO,
     logging.NOTSET,
     logging.WARNING,
@@ -25,9 +24,7 @@ WARNING, ERROR and CRITICAL)
 
 
 class Priority(Enum):
-    """
-    Enumeration of supported ntfy priority levels
-    """
+    """Enumeration of supported ntfy priority levels."""
 
     MAX = "5"
     """MAX"""

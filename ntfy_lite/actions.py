@@ -1,4 +1,4 @@
-""" Module defining the Action class as well as it subclasses:
+"""Module defining the Action class as well as it subclasses.
 
 - ViewAction
 - HttpAction
@@ -6,6 +6,7 @@
 
 import typing
 from enum import Enum, auto
+
 from .utils import validate_url
 
 
@@ -35,32 +36,36 @@ class Action:
 
     def _str(self, attrs: typing.Tuple[str, ...]) -> str:
         values = {attr: getattr(self, attr) for attr in attrs}
-        return ", ".join(
-            [self.action]
-            + [f"{attr}={value}" for attr, value in values.items() if value is not None]
-        )
+        return ", ".join([self.action] + [f"{attr}={value}" for attr, value in values.items() if value is not None])
 
 
 class ViewAction(Action):
-    """
-    Class encapsulating the information of a view action.
+    """Class encapsulating the information of a view action.
+
+    See Also
+    --------
     See: [ntfy view action](https://ntfy.sh/docs/publish/#open-websiteapp)
+
+    Arguments
+    ---------
     For arguments: see documentation of the [ntfy_lite.actions.Action][] superclass
     """
 
-    def __init__(self, label: str, url: str, clear: bool = False) -> None:
+    def __init__(
+        self: typing.Self,
+        label: str,
+        url: str,
+        clear: bool = False,
+    ) -> None:
         super().__init__("view", label, url, clear)
 
-    def __str__(self) -> str:
+    def __str__(self: typing.Self) -> str:
         _attrs = ("label", "url", "clear")
         return self._str(_attrs)
 
 
 class HttpMethod(Enum):
-    """
-    List of methods supported by instances
-    of HttpAction.
-    """
+    """List of methods supported by instances of HttpAction."""
 
     GET = auto()
     """ GET http method """
@@ -73,18 +78,26 @@ class HttpMethod(Enum):
 
 
 class HttpAction(Action):
-    """
-    Class encapsulating the information of a view action.
+    """Class encapsulating the information of an HTTP action.
+
+    See Also
+    --------
     See: [ntfy http action](https://ntfy.sh/docs/publish/#send-http-request)
 
-    Args:
-      label: arbitrary string
-      url: url to which the request should be sent
-      clear: if the ntfy notification should be cleared after the request succeeds
-      method: GET, POST or PUT
-      headers: HTTP headers to be passed in the request
-      body: HTTP body
-
+    Arguments
+    ---------
+    label: str
+        arbitrary string
+    url: str
+        url to which the request should be sent
+    clear: bool, by default=False
+        if the ntfy notification should be cleared after the request succeeds
+    method: HttpMethod, by default HttpMethod.GET
+        GET, POST or PUT
+    headers: typing.Optional[typing.Mapping[str, str]], by default = None
+        HTTP headers to be passed in the request
+    body: typing.Optional[str], by default = None
+        HTTP body
     """
 
     def __init__(
@@ -93,8 +106,8 @@ class HttpAction(Action):
         url: str,
         clear: bool = False,
         method: HttpMethod = HttpMethod.GET,
-        headers: typing.Optional[typing.Mapping[str, str]] = None,
-        body: typing.Optional[str] = None,
+        headers: typing.Mapping[str, str] | None = None,
+        body: str | None = None,
     ):
         super().__init__("http", label, url, clear)
         self.method = method.value
@@ -106,7 +119,5 @@ class HttpAction(Action):
         main = self._str(_attrs)
         if not self.headers:
             return main
-        headers_str = ", ".join(
-            [f"headers.{key}={value}" for key, value in self.headers.items()]
-        )
+        headers_str = ", ".join([f"headers.{key}={value}" for key, value in self.headers.items()])
         return main + ", " + headers_str

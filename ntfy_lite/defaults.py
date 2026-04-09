@@ -1,10 +1,8 @@
-"""
-Module defining level2tags, i.e. a mapping between logging level to emoticons.
-This mapping is used for the logging handler ([ntfy_lite.handler.NtfyHandler][])
-"""
+"""Module defining a mapping between logging level to emoticons."""
 
-import typing
 import logging
+import typing
+
 from .ntfy2logging import LoggingLevel
 
 level2tags: typing.Dict[LoggingLevel, typing.Tuple[str, ...]] = {
@@ -13,7 +11,7 @@ level2tags: typing.Dict[LoggingLevel, typing.Tuple[str, ...]] = {
     logging.WARNING: ("warning",),
     logging.INFO: ("artificial_satellite",),
     logging.DEBUG: ("speech_balloon",),
-    logging.NOTSET: tuple(),
+    logging.NOTSET: (),
 }
 """
 Default mapping from logging level to tags, i.e. tags

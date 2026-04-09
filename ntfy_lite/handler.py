@@ -20,20 +20,25 @@ logging.basicConfig(
 )
 ```
 
-
 """
 
+####################
+# Import Statement #
+####################
 import logging
 import typing
 from pathlib import Path
-from .ntfy2logging import LoggingLevel, Priority, level2priority
+
 from .defaults import level2tags
 from .ntfy import DryRun, push
+from .ntfy2logging import LoggingLevel, Priority, level2priority
 
 
+###########
+# CLASSES #
+###########
 class NtfyHandler(logging.Handler):
-    """Subclass of [logging.Handler](https://docs.python.org/3/library/logging.html#handler-objects)
-    that pushes ntfy notifications.
+    """Subclass of [logging.Handler](https://docs.python.org/3/library/logging.html#handler-objects) that pushes ntfy notifications.
 
     The notification title will be the record name, and the
     notification message will be either the record message or a
@@ -45,16 +50,15 @@ class NtfyHandler(logging.Handler):
         topic: str,
         url: str = "https://ntfy.sh",
         twice_in_a_row: bool = True,
-        error_callback: typing.Optional[
-            typing.Callable[[Exception], typing.Any]
-        ] = None,
-        level2tags: typing.Dict[LoggingLevel, typing.Tuple[str, ...]] = level2tags,
-        level2priority: typing.Dict[LoggingLevel, Priority] = level2priority,
-        level2filepath: typing.Dict[LoggingLevel, Path] = {},
-        level2email: typing.Dict[LoggingLevel, str] = {},
+        error_callback: typing.Callable[[Exception], typing.Any] | None = None,
+        level2tags: dict[LoggingLevel, tuple[str, ...]] = level2tags,
+        level2priority: dict[LoggingLevel, Priority] = level2priority,
+        level2filepath: dict[LoggingLevel, Path] | None = None,
+        level2email: dict[LoggingLevel, str] | None = None,
         dry_run: DryRun = DryRun.off,
-    ):
-        """
+    ) -> None:
+        """Start.
+
         Args:
           topic: Topic on which the notifications will be pushed.
           url: https://ntfy.sh by default.
@@ -72,10 +76,16 @@ class NtfyHandler(logging.Handler):
           dry_run: For testing. If 'on', no notification will be sent. If 'error', no notification will be sent,
             instead a NtfyError are raised.
         """
+
+        # ... checks ...
+        level2filepath = {} if level2filepath is None else level2filepath
+        level2email = {} if level2email is None else level2email
+
+        # ... Init ...
         super().__init__()
         self._url = url
         self._topic = topic
-        self._last_messages: typing.Optional[typing.Dict[str, str]]
+        self._last_messages: dict[str, str] | None
         self._last_messages = None if twice_in_a_row else {}
         self._level2tags = level2tags
         self._level2priority = level2priority
@@ -83,12 +93,13 @@ class NtfyHandler(logging.Handler):
         self._level2email = level2email
         self._error_callback = error_callback
         self._dry_run = dry_run
+        self._twice_in_a_row = twice_in_a_row
 
         for logging_level in level2priority:
             if logging_level not in self._level2priority:
                 raise ValueError(
                     f"NtfyHandler, level2priority argument: missing mapping from "
-                    f"logging level {logging_level} to ntfy priority level"
+                    f"logging level {logging_level} to ntfy priority level",
                 )
 
     def _is_new_record(self, record: logging.LogRecord) -> bool:
@@ -105,9 +116,8 @@ class NtfyHandler(logging.Handler):
         return True
 
     def emit(self, record: logging.LogRecord) -> None:
-        """
-        Push the record as an ntfy message.
-        """
+        """Push the record as an ntfy message."""
+
         if self._last_messages and not self._is_new_record(record):
             return
         try:
@@ -123,11 +133,12 @@ class NtfyHandler(logging.Handler):
         try:
             tags = self._level2tags[record.levelno]
         except KeyError:
-            tags = tuple()
+            tags = ()
         try:
+            title = record.extra.get("logger_name") if hasattr(record, "extra") is not None else record.name
             push(
-                self._topic,
-                record.name,
+                topic=self._topic,
+                title=title,
                 message=message,
                 priority=self._level2priority[record.levelno],
                 tags=tags,
@@ -137,6 +148,7 @@ class NtfyHandler(logging.Handler):
                 dry_run=self._dry_run,
             )
         except Exception as e:
+            logging.exception("NTFY Log Handler failed")
             if self._error_callback is not None:
                 self._error_callback(e)
             self.handleError(record)

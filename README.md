@@ -8,16 +8,16 @@
 
 It comes with a **Handler** for the [logging package](https://docs.python.org/3/library/logging.html).
 
-See the full documentation [here](https://mpi-is.github.io/ntfy_lite/).
+See the original documentation [here](https://mpi-is.github.io/ntfy_lite/).
+See the original source [here](https://github.com/MPI-IS/ntfy_lite).
 
-See the source [here](https://github.com/MPI-IS/ntfy_lite).
+This fork only contains some small modifications to better work with my projects.
 
 ## Installation
 
 from source:
 
 ```bash
-git clone https://github.com/MPI-IS/ntfy_lite.git
 cd ntfy_lite
 pip install .
 ```
@@ -46,4 +46,3 @@ No check regarding ntfy [limitations](https://ntfy.sh/docs/publish/#limitations)
 ## Copyright
 
 © 2020, Max Planck Society - Max Planck Institute for Intelligent Systems
-

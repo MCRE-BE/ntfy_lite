@@ -1,19 +1,27 @@
-"""
-Module defining the push method, which send a message or the content of a file to an NTFY channel.
-"""
+"""Module defining the push method, which send a message or the content of a file to an NTFY channel."""
 
+####################
+# IMPORT STATEMENT #
+####################
+import logging
+import traceback
 import typing
-import requests
-from pathlib import Path
 from enum import Enum, auto
-from .ntfy2logging import Priority
-from .actions import Action
-from .utils import validate_url
+from pathlib import Path
+
+import requests
+
 from .error import NtfyError
+from .ntfy2logging import Priority
+from .utils import validate_url
 
 
+###########
+# CLASSES #
+###########
 class _DataManager:
-    """
+    """The data.
+
     The data pushed to ntfy is either a message (str) or the content of
     a file (i.e. file attachment, see https://ntfy.sh/docs/publish/#attachments).
     An instance of _DataManager ensures that at least message or filepath is not None and
@@ -23,35 +31,34 @@ class _DataManager:
     """
 
     def __init__(
-        self, message: typing.Optional[str], filepath: typing.Optional[Path]
+        self,
+        message: str | None,
+        filepath: Path | None,
     ) -> None:
         # checking the user is at least pushing a message
         # or a file attachment
         if not any((message, filepath)):
-            raise ValueError(
-                "must push either a message or a filepath"
-                " (no message nor filepath argument specified)"
-            )
+            raise ValueError("must push either a message or a filepath (no message nor filepath argument specified)")
 
         # checking the user is not pushing both a message
         # and a file attachment
         if all((message, filepath)):
-            raise ValueError(
-                "can not push a message and a filepath " "at the same time."
-            )
+            raise ValueError("can not push a message and a filepath at the same time.")
 
         # if pushing a file attachment, making
         # sure the file exists
-        if filepath is not None:
-            if not filepath.is_file():
-                raise FileNotFoundError(f"failed to find file to attach ({filepath})")
+        if filepath is not None and not filepath.is_file():
+            raise FileNotFoundError(f"failed to find file to attach ({filepath})")
 
         # self._data is either a file to the filepath,
         # or the str corresponding to message
         self._data: typing.Union[typing.IO, str]
         if filepath is not None:
-            self._data = open(filepath, "rb")
-        elif message is not None:
+            self._data = open(filepath, "rb")  # noqa: SIM115
+        elif message is not None and isinstance(message, str):
+            self._data = message.encode(encoding="latin-1", errors="replace").decode(encoding="latin-1")
+        elif message is not None and not isinstance(message, str):
+            message = "".join(traceback.TracebackException.from_exception(message).format())
             self._data = message.encode(encoding="latin-1", errors="replace").decode(encoding="latin-1")
 
     def __enter__(self) -> typing.Union[typing.IO, str]:
@@ -83,17 +90,17 @@ class DryRun(Enum):
 def push(
     topic: str,
     title: str,
-    message: typing.Optional[str] = None,
+    message: str | None = None,
     priority: Priority = Priority.DEFAULT,
     tags: typing.Union[str, typing.Iterable[str]] = [],
-    click: typing.Optional[str] = None,
-    email: typing.Optional[str] = None,
-    filepath: typing.Optional[Path] = None,
-    attach: typing.Optional[str] = None,
-    icon: typing.Optional[str] = None,
-    actions: typing.Union[Action, typing.Sequence[Action]] = [],
-    at: typing.Optional[str] = None,
-    url: typing.Optional[str] = "https://ntfy.sh",
+    click: str | None = None,
+    email: str | None = None,
+    filepath: Path | None = None,
+    attach: str | None = None,
+    icon: str | None = None,
+    actions: typing.Union[Action, typing.Sequence[Action]] = (),
+    at: str | None = None,
+    url: str | None = "https://ntfy.sh",
     dry_run: DryRun = DryRun.off,
 ) -> None:
     """
@@ -173,8 +180,7 @@ def push(
 
         # sending
         if dry_run == DryRun.off:
-            response = requests.put(f"{url}/{topic}", data=data, headers=headers)
-            if not response.ok:
+            response = requests.put(f"{url}/{topic}", data=data, headers=headers, timeout=10)
                 raise NtfyError(response.status_code, response.reason)
         elif dry_run == DryRun.error:
             raise NtfyError(-1, "DryRun.error passed as argument")
