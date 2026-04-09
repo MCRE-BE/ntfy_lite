@@ -35,17 +35,23 @@ dependencies = [
 buffer = [
   "pysqlite3",
 ]
-
-[dependency-groups]
 dev = [
+  "ntfy_lite[buffer,test]",
   "basedpyright>0",
-  "pytest>0",
   "ruff>0",
   "zensical",
   "prek",
 ]
+test = [
+  "pytest>0",
+]
 docs = [
   "zensical",
+]
+
+[dependency-groups]
+dev = [
+  "ntfy_lite[dev,docs]",
 ]
 
 ## #####
