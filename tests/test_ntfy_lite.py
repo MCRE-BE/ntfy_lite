@@ -10,9 +10,9 @@ import tempfile
 import typing
 from pathlib import Path
 
-import dll_etl.ntfy_lite as ntfy
+import ntfy_lite as ntfy
 import pytest
-from dll_etl.ntfy_lite.buffer import NtfyBuffer
+from ntfy_lite.buffer import NtfyBuffer
 
 
 ####################

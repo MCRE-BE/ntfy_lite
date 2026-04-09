@@ -98,6 +98,7 @@ class NtfyHandler(logging.Handler):
         self._level2tags = level2tags
         self._level2priority = level2priority
         self._level2filepath = level2filepath
+        self._level2email = level2email
         self._error_callback = error_callback
         self._dry_run = dry_run
         self._twice_in_a_row = twice_in_a_row
