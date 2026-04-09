@@ -30,8 +30,10 @@ import typing
 from pathlib import Path
 
 import warnings
+
 try:
     from .buffer import NtfyBuffer
+
     _HAS_BUFFER = True
 except ImportError:
     _HAS_BUFFER = False
@@ -156,7 +158,11 @@ class NtfyHandler(logging.Handler):
         except KeyError:
             tags = ()
         try:
-            title = record.extra.get("logger_name") if hasattr(record, "extra") is not None else record.name
+            title = (
+                record.extra.get("logger_name")
+                if hasattr(record, "extra") is not None
+                else record.name
+            )
             push(
                 topic=self._topic,
                 title=title,

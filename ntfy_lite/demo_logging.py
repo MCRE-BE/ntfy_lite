@@ -1,4 +1,4 @@
-""" ntfy lite: ntfy logging Handler example """
+"""ntfy lite: ntfy logging Handler example"""
 
 import time
 import typing
