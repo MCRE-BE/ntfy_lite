@@ -42,6 +42,9 @@ dev = [
   "pytest>0",
   "ruff>0",
 ]
+docs = [
+  "zensical",
+]
 
 ## #####
 # TOOL #
