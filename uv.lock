@@ -234,13 +234,16 @@ dev = [
     { name = "ruff" },
     { name = "zensical" },
 ]
+docs = [
+    { name = "zensical" },
+]
 test = [
     { name = "pytest" },
 ]
 
 [package.dev-dependencies]
 dev = [
-    { name = "ntfy-lite", extra = ["dev"] },
+    { name = "ntfy-lite", extra = ["dev", "docs", "test"] },
 ]
 
 [package.metadata]
@@ -254,11 +257,12 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">0" },
     { name = "validators", specifier = ">=0.20.0" },
     { name = "zensical", marker = "extra == 'dev'" },
+    { name = "zensical", marker = "extra == 'docs'" },
 ]
-provides-extras = ["buffer", "dev", "test"]
+provides-extras = ["buffer", "dev", "test", "docs"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "ntfy-lite", extras = ["dev", "docs"] }]
+dev = [{ name = "ntfy-lite", extras = ["dev", "docs", "test"] }]
 
 [[package]]
 name = "packaging"
