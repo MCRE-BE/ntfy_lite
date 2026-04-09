@@ -1,8 +1,7 @@
-site_name: ntfy lite
+site_name: ntfy_lite (High-Performance Fork)
 
 theme:
   name: "material"
-  logo: assets/mpi-is.png
   palette:
     accent: indigo
   features:
@@ -11,7 +10,6 @@ theme:
     - navigation.footer
   icon:
     repo: fontawesome/brands/github
-
 
 markdown_extensions:
   - pymdownx.highlight:
@@ -22,19 +20,18 @@ markdown_extensions:
   - pymdownx.snippets
   - pymdownx.superfences
 
-repo_url: https://github.com/MPI-IS/ntfy_lite
-repo_name: MPI-IS/ntfy_lite
+repo_url: https://github.com/MCRE-BE/ntfy_lite
+repo_name: MCRE-BE/ntfy_lite
 
-copyright: Copyright &copy; 2020 Max Planck Society
+copyright: Copyright &copy; 2026 Mathias Creemers
 
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/MPI-IS/ntfy_lite
+      link: https://github.com/MCRE-BE/ntfy_lite
 
 extra_css:
  - stylesheets/extra.css
-
 
 plugins:
   - search
