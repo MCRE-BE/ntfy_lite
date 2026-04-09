@@ -29,6 +29,7 @@ import logging
 import typing
 from pathlib import Path
 
+from .buffer import NtfyBuffer
 from .defaults import level2tags
 from .ntfy import DryRun, push
 from .ntfy2logging import LoggingLevel, Priority, level2priority
@@ -56,7 +57,8 @@ class NtfyHandler(logging.Handler):
         level2filepath: dict[LoggingLevel, Path] | None = None,
         level2email: dict[LoggingLevel, str] | None = None,
         dry_run: DryRun = DryRun.off,
-    ) -> None:
+        db_path: Path | None = None,
+    ):
         """Start.
 
         Args:
@@ -93,7 +95,7 @@ class NtfyHandler(logging.Handler):
         self._level2email = level2email
         self._error_callback = error_callback
         self._dry_run = dry_run
-        self._twice_in_a_row = twice_in_a_row
+        self._buffer = NtfyBuffer(db_path) if db_path is not None else None
 
         for logging_level in level2priority:
             if logging_level not in self._level2priority:
@@ -146,6 +148,7 @@ class NtfyHandler(logging.Handler):
                 filepath=filepath,
                 url=self._url,
                 dry_run=self._dry_run,
+                buffer=self._buffer,
             )
         except Exception as e:
             logging.exception("NTFY Log Handler failed")

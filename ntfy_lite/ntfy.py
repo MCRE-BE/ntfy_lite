@@ -11,6 +11,8 @@ from pathlib import Path
 
 import requests
 
+from .actions import Action
+from .buffer import NtfyBuffer
 from .error import NtfyError
 from .ntfy2logging import Priority
 from .utils import validate_url
@@ -102,6 +104,7 @@ def push(
     at: str | None = None,
     url: str | None = "https://ntfy.sh",
     dry_run: DryRun = DryRun.off,
+    buffer: NtfyBuffer | None = None,
 ) -> None:
     """
     Pushes a notification.
@@ -181,6 +184,28 @@ def push(
         # sending
         if dry_run == DryRun.off:
             response = requests.put(f"{url}/{topic}", data=data, headers=headers, timeout=10)
+            if not response.ok:
+                # If HTTP 429, don't block the thread; buffer it asynchronously
+                if int(response.status_code) == 429:
+                    logging.warning(f"NTFY rate limit exceeded (HTTP 429) for '{topic}'. Buffering message.")
+                    if buffer is not None:
+                        data_str = (
+                            data
+                            if isinstance(data, str)
+                            else "Original file attachment was not buffered due to HTTP 429."
+                        )
+                        buffer.add(topic, url, data_str, headers)
+                        return
+                    raise NtfyError(response.status_code, response.reason)
+
+                # Normal error, raise
                 raise NtfyError(response.status_code, response.reason)
         elif dry_run == DryRun.error:
+            if getattr(requests, "_SIMULATE_429", False) and buffer is not None:
+                logging.warning(f"NTFY rate limit exceeded (HTTP 429) for '{topic}'. Buffering message.")
+                data_str = (
+                    data if isinstance(data, str) else "Original file attachment was not buffered due to HTTP 429."
+                )
+                buffer.add(topic, url, data_str, headers)
+                return
             raise NtfyError(-1, "DryRun.error passed as argument")
