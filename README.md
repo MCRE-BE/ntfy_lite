@@ -33,7 +33,7 @@ pip install ntfy_lite[buffer]
 
 **From source:**
 ```bash
-git clone https://github.com/MPI-IS/ntfy_lite.git
+git clone https://github.com/MCRE-BE/ntfy_lite.git
 cd ntfy_lite
 pip install .
 ```
