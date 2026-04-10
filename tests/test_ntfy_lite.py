@@ -80,7 +80,9 @@ def test_icon_push():
     topic = "ntfy_lite_test"
     title = "ntfy lite test mimimal push"
     message = "ntfy lite test mimimal push: message"
-    icon = "https://styles.redditmedia.com/t5_32uhe/styles/communityIcon_xnt6chtnr2j21.png"
+    icon = (
+        "https://styles.redditmedia.com/t5_32uhe/styles/communityIcon_xnt6chtnr2j21.png"
+    )
     ntfy.push(topic, title, icon=icon, message=message, dry_run=True)
 
 
@@ -210,7 +212,9 @@ def test_handler(
 ):
     """Test handler behavior with varying configuration."""
     topic = "ntfy_lite handler test"
-    record = logging.LogRecord("test record", logging_level, "", -1, "record message", None, None)
+    record = logging.LogRecord(
+        "test record", logging_level, "", -1, "record message", None, None
+    )
 
     global _callback_called
     _callback_called = False
@@ -262,7 +266,7 @@ def test_handler(
 
     if not use_callback:
         assert not _callback_called
-    elif dry_run in (ntfy.DryRun.on, ntfy.DryRun.error):
+    elif dry_run == ntfy.DryRun.error:
         assert _callback_called
 
 
@@ -308,7 +312,9 @@ def test_rate_limit_buffering_and_logging(monkeypatch, tmp_path):
     )
 
     logger.removeHandler(test_handler)
-    assert any("NTFY rate limit exceeded (HTTP 429)" in log for log in logs), "Expected rate limit warning in logs."
+    assert any("NTFY rate limit exceeded (HTTP 429)" in log for log in logs), (
+        "Expected rate limit warning in logs."
+    )
 
     # Verify that the SQLite buffer has been updated
     with sqlite3.connect(str(db_path)) as conn:

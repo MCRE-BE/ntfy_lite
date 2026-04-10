@@ -6,6 +6,7 @@
 
 import typing
 import sys
+
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -41,7 +42,10 @@ class Action:
 
     def _str(self, attrs: typing.Tuple[str, ...]) -> str:
         values = {attr: getattr(self, attr) for attr in attrs}
-        return ", ".join([self.action] + [f"{attr}={value}" for attr, value in values.items() if value is not None])
+        return ", ".join(
+            [self.action]
+            + [f"{attr}={value}" for attr, value in values.items() if value is not None]
+        )
 
 
 class ViewAction(Action):
@@ -124,5 +128,7 @@ class HttpAction(Action):
         main = self._str(_attrs)
         if not self.headers:
             return main
-        headers_str = ", ".join([f"headers.{key}={value}" for key, value in self.headers.items()])
+        headers_str = ", ".join(
+            [f"headers.{key}={value}" for key, value in self.headers.items()]
+        )
         return main + ", " + headers_str

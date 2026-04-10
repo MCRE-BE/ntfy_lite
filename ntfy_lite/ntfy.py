@@ -12,6 +12,7 @@ from pathlib import Path
 import requests
 
 from .actions import Action
+
 try:
     from .buffer import NtfyBuffer
 except ImportError:
@@ -43,7 +44,9 @@ class _DataManager:
         # checking the user is at least pushing a message
         # or a file attachment
         if not any((message, filepath)):
-            raise ValueError("must push either a message or a filepath (no message nor filepath argument specified)")
+            raise ValueError(
+                "must push either a message or a filepath (no message nor filepath argument specified)"
+            )
 
         # checking the user is not pushing both a message
         # and a file attachment
@@ -61,10 +64,16 @@ class _DataManager:
         if filepath is not None:
             self._data = open(filepath, "rb")  # noqa: SIM115
         elif message is not None and isinstance(message, str):
-            self._data = message.encode(encoding="latin-1", errors="replace").decode(encoding="latin-1")
+            self._data = message.encode(encoding="latin-1", errors="replace").decode(
+                encoding="latin-1"
+            )
         elif message is not None and not isinstance(message, str):
-            message = "".join(traceback.TracebackException.from_exception(message).format())
-            self._data = message.encode(encoding="latin-1", errors="replace").decode(encoding="latin-1")
+            message = "".join(
+                traceback.TracebackException.from_exception(message).format()
+            )
+            self._data = message.encode(encoding="latin-1", errors="replace").decode(
+                encoding="latin-1"
+            )
 
     def __enter__(self) -> typing.Union[typing.IO, str]:
         return self._data
@@ -186,11 +195,15 @@ def push(
 
         # sending
         if dry_run == DryRun.off:
-            response = requests.put(f"{url}/{topic}", data=data, headers=headers, timeout=10)
+            response = requests.put(
+                f"{url}/{topic}", data=data, headers=headers, timeout=10
+            )
             if not response.ok:
                 # If HTTP 429, don't block the thread; buffer it asynchronously
                 if int(response.status_code) == 429:
-                    logging.warning(f"NTFY rate limit exceeded (HTTP 429) for '{topic}'. Buffering message.")
+                    logging.warning(
+                        f"NTFY rate limit exceeded (HTTP 429) for '{topic}'. Buffering message."
+                    )
                     if buffer is not None:
                         data_str = (
                             data
@@ -205,9 +218,13 @@ def push(
                 raise NtfyError(response.status_code, response.reason)
         elif dry_run == DryRun.error:
             if getattr(requests, "_SIMULATE_429", False) and buffer is not None:
-                logging.warning(f"NTFY rate limit exceeded (HTTP 429) for '{topic}'. Buffering message.")
+                logging.warning(
+                    f"NTFY rate limit exceeded (HTTP 429) for '{topic}'. Buffering message."
+                )
                 data_str = (
-                    data if isinstance(data, str) else "Original file attachment was not buffered due to HTTP 429."
+                    data
+                    if isinstance(data, str)
+                    else "Original file attachment was not buffered due to HTTP 429."
                 )
                 buffer.add(topic, url, data_str, headers)
                 return

@@ -11,6 +11,7 @@ import threading
 import time
 from pathlib import Path
 import sys
+
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -116,7 +117,9 @@ class NtfyBuffer:
         try:
             with sqlite3.connect(str(self.db_path), timeout=10) as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT id, topic, url, headers, data FROM buffer ORDER BY created_at ASC")
+                cursor.execute(
+                    "SELECT id, topic, url, headers, data FROM buffer ORDER BY created_at ASC"
+                )
                 rows = cursor.fetchall()
 
             for row_id, topic, url, headers_json, data in rows:
@@ -125,13 +128,17 @@ class NtfyBuffer:
                 try:
                     headers = json.loads(headers_json)
 
-                    response = requests.put(f"{url}/{topic}", data=data, headers=headers, timeout=10)
+                    response = requests.put(
+                        f"{url}/{topic}", data=data, headers=headers, timeout=10
+                    )
                     if response.ok:
                         with sqlite3.connect(str(self.db_path), timeout=10) as conn:
                             conn.execute("DELETE FROM buffer WHERE id = ?", (row_id,))
                     elif int(response.status_code) == 429:
                         # Still rate limited; stop flushing so we don't spam the server further
-                        logging.warning("NTFY buffer fast retry rate limited (HTTP 429). Will stop flusher.")
+                        logging.warning(
+                            "NTFY buffer fast retry rate limited (HTTP 429). Will stop flusher."
+                        )
                         break
                     else:
                         # Some other failure, discard the buffered message and log the trace
