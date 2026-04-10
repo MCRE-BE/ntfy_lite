@@ -21,10 +21,17 @@ from .error import NtfyError
 from .ntfy2logging import Priority
 from .utils import validate_url
 
-
 ###########
 # CLASSES #
 ###########
+
+
+# Use a shared Session object to enable urllib3 connection pooling.
+# This significantly reduces latency (by skipping repeated TLS handshakes)
+# when pushing multiple notifications to the same ntfy server host.
+_session = requests.Session()
+
+
 class _DataManager:
     """The data.
 
@@ -218,8 +225,11 @@ def push(
 
         # sending
         if dry_run == DryRun.off:
-            response = requests.put(
-                f"{url}/{topic}", data=data, headers=headers, timeout=10
+            response = _session.put(
+                f"{url}/{topic}",
+                data=data,
+                headers=headers,
+                timeout=10,
             )
             if not response.ok:
                 # If HTTP 429, don't block the thread; buffer it asynchronously
