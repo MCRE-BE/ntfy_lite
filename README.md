@@ -20,22 +20,21 @@ Original project documentation can be found [here](https://mpi-is.github.io/ntfy
 
 ## Installation
 
-**From PyPI (Recommended):**
+As this is a fork, it is recommended to install directly from source rather than PyPI.
+
+**Standard Installation:**
 ```bash
-pip install ntfy_lite
+git clone https://github.com/MPI-IS/ntfy_lite.git
+cd ntfy_lite
+pip install .
 ```
 
 **With Buffering Support:**
 To enable SQLite-based background buffering to prevent 429 rate limit freezes, install the `buffer` extra:
 ```bash
-pip install ntfy_lite[buffer]
-```
-
-**From source:**
-```bash
-git clone https://github.com/MCRE-BE/ntfy_lite.git
+git clone https://github.com/MPI-IS/ntfy_lite.git
 cd ntfy_lite
-pip install .
+pip install ".[buffer]"
 ```
 
 ## Structure & Options
