@@ -107,9 +107,9 @@ class NtfyHandler(logging.Handler):
 
         self._buffer = None
 
-        disable_buffer_env = os.environ.get(
-            "NTFY_LITE_DISABLE_BUFFER", "0"
-        ).lower() in ("1", "true")
+        # ...Activate or deactive NTFY Buffering
+        disable_buffer_env = os.environ.get("NTFY_LITE_DISABLE_BUFFER", "0").lower()
+        disable_buffer_env = disable_buffer_env in ("1", "true")
 
         if db_path is not False and not disable_buffer_env:
             if db_path is None or db_path is True:
@@ -132,6 +132,7 @@ class NtfyHandler(logging.Handler):
                 warnings.warn(msg, UserWarning)
                 logging.info(msg)
 
+        # ... Check logging level's
         for logging_level in level2priority:
             if logging_level not in self._level2priority:
                 raise ValueError(
