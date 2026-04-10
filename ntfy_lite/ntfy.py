@@ -11,6 +11,7 @@ from pathlib import Path
 
 import requests
 
+
 from .actions import Action
 
 try:
@@ -25,6 +26,14 @@ from .utils import validate_url
 ###########
 # CLASSES #
 ###########
+
+
+# Use a shared Session object to enable urllib3 connection pooling.
+# This significantly reduces latency (by skipping repeated TLS handshakes)
+# when pushing multiple notifications to the same ntfy server host.
+_session = requests.Session()
+
+
 class _DataManager:
     """The data.
 
@@ -195,7 +204,7 @@ def push(
 
         # sending
         if dry_run == DryRun.off:
-            response = requests.put(
+            response = _session.put(
                 f"{url}/{topic}", data=data, headers=headers, timeout=10
             )
             if not response.ok:

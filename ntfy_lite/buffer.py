@@ -19,6 +19,8 @@ else:
 
 import requests
 
+_session = requests.Session()
+
 
 ###########
 # CLASSES #
@@ -128,7 +130,7 @@ class NtfyBuffer:
                 try:
                     headers = json.loads(headers_json)
 
-                    response = requests.put(
+                    response = _session.put(
                         f"{url}/{topic}", data=data, headers=headers, timeout=10
                     )
                     if response.ok:
