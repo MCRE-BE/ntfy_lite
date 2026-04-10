@@ -21,11 +21,12 @@ from .error import NtfyError
 from .ntfy2logging import Priority
 from .utils import validate_url
 
+logger = logging.getLogger("ntfy_lite")
+
+
 ###########
 # CLASSES #
 ###########
-
-
 # Use a shared Session object to enable urllib3 connection pooling.
 # This significantly reduces latency (by skipping repeated TLS handshakes)
 # when pushing multiple notifications to the same ntfy server host.
@@ -119,7 +120,7 @@ def _buffer_429(
     if buffer is None:
         return False
 
-    logging.warning(
+    logger.warning(
         f"NTFY rate limit exceeded (HTTP 429) for '{topic}'. Buffering message."
     )
     data_str = (
