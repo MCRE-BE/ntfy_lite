@@ -1,15 +1,19 @@
+# ruff: noqa: E402
+
+# INITIAL IMPORT
 import sys
 from unittest.mock import MagicMock
 
-import pytest
-
-from ntfy_lite.actions import Action, HttpAction, HttpMethod, ViewAction
-
 # Initial mock to allow importing ntfy_lite
+# This needs to run before importing ntfy_lite
 mock_validators = MagicMock()
 mock_validators.url.return_value = True
 sys.modules["validators"] = mock_validators
 sys.modules["requests"] = MagicMock()
+
+import pytest
+
+from ntfy_lite.actions import Action, HttpAction, HttpMethod, ViewAction
 
 
 @pytest.fixture(autouse=True)
