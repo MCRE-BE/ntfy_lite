@@ -9,6 +9,7 @@ import os
 import tempfile
 import traceback
 import typing
+from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
 
@@ -35,17 +36,29 @@ from .utils import validate_url
 _session = requests.Session()
 
 
-class _DataManager:
-    """The data.
+@dataclass
+class _DataPayload:
+    """Holds the resulting payload and headers for pushing to ntfy."""
+    data: typing.Union[typing.IO, str]
+    message_header: str | None = None
+    filename_header: str | None = None
 
-    The data pushed to ntfy is either a message, a file, or both.
-    If the message is very long (e.g., a traceback), this manager will automatically
-    truncate it to fit within ntfy's character limits and attach the full message as a file.
+
+class _DataManager:
+    """The data manager.
+
+    The payload pushed to ntfy can be a message, a file, or both simultaneously.
+    When pushing both, ntfy receives the file in the HTTP body and the text in the `Message` HTTP header.
+
+    If the text message is very long (e.g., a traceback), ntfy will normally reject it or
+    auto-convert it to an attachment without a text preview. To prevent this, this manager
+    will truncate large messages to fit within limits, and attach the full un-truncated
+    message as a temporary text file, providing the user with both a preview and the full text.
     """
 
     def __init__(
         self,
-        message: typing.Any,
+        message: typing.Any | None,
         filepath: Path | None,
     ) -> None:
         if message is None and filepath is None:
@@ -58,49 +71,58 @@ class _DataManager:
 
         self._file_to_close: typing.IO | None = None
         self._temp_file_path: str | None = None
+        self._payload = _DataPayload(data="")
 
-        self.data: typing.Union[typing.IO, str] = ""
-        self.message_header: str | None = None
-        self.filename_header: str | None = None
-
+        # Format any non-string objects (like Exceptions) into a readable traceback string
         if message is not None and not isinstance(message, str):
             message = "".join(
                 traceback.TracebackException.from_exception(message).format()
             )
 
         if filepath is not None:
+            # If a file is explicitly provided by the user, we upload it as the HTTP body.
             self._file_to_close = open(filepath, "rb")  # noqa: SIM115
-            self.data = self._file_to_close
+            self._payload.data = self._file_to_close
             if message is not None:
-                self.message_header = message
+                # The text message must be placed in the HTTP header since the body is occupied.
+                self._payload.message_header = message
         elif message is not None:
+            # We only have a text message.
             msg_bytes = message.encode("utf-8")
+
+            # If the text exceeds 4000 bytes, ntfy converts the whole thing to an attachment.
+            # We bypass this by intentionally truncating the text and generating our own attachment.
             if len(msg_bytes) > 4000:
+                # 1. Truncate the text message to keep the most relevant parts (the start and end).
                 truncated_str = (
                     msg_bytes[:1000].decode("utf-8", "ignore")
                     + "\n... [truncated] ...\n"
                     + msg_bytes[-2900:].decode("utf-8", "ignore")
                 )
-                self.message_header = truncated_str
+                self._payload.message_header = truncated_str
 
+                # 2. Write the complete, un-truncated string to a temporary file.
                 tf = tempfile.NamedTemporaryFile(delete=False, suffix=".txt", prefix="traceback_")
                 tf.write(msg_bytes)
                 tf.flush()
                 tf.seek(0)
 
+                # 3. Queue the temporary file to be uploaded in the HTTP body.
                 self._file_to_close = tf
                 self._temp_file_path = tf.name
-                self.data = self._file_to_close
-                self.filename_header = "traceback.txt"
+                self._payload.data = self._file_to_close
+                self._payload.filename_header = "traceback.txt"
             else:
-                self.data = message.encode(encoding="latin-1", errors="replace").decode(
+                # The message fits within limits, we can send it directly as the HTTP body.
+                self._payload.data = message.encode(encoding="latin-1", errors="replace").decode(
                     encoding="latin-1"
                 )
 
-    def __enter__(self) -> typing.Tuple[typing.Union[typing.IO, str], str | None, str | None]:
-        return self.data, self.message_header, self.filename_header
+    def __enter__(self) -> _DataPayload:
+        return self._payload
 
     def __exit__(self, _, __, ___) -> None:
+        # Cleanup any opened file handles or temporary files after the request has been sent.
         if self._file_to_close is not None:
             self._file_to_close.close()
         if self._temp_file_path is not None:
@@ -204,7 +226,7 @@ def push(
 
     # the message manager handles files and long messages,
     # ensuring files are closed after sending.
-    with _DataManager(message, filepath) as (data, message_header, filename_header):
+    with _DataManager(message, filepath) as payload:
         # checking that arguments that are expected to be
         # urls are urls
         urls = {"click": click, "attach": attach, "icon": icon}
@@ -224,13 +246,13 @@ def push(
         }
         headers = {key: value for key, value in direct_mapping.items() if value}
 
-        if message_header is not None:
+        if payload.message_header is not None:
             # use RFC 2047 base64 encoding to support newlines and utf-8 securely
-            b64 = base64.b64encode(message_header.encode("utf-8")).decode("ascii")
+            b64 = base64.b64encode(payload.message_header.encode("utf-8")).decode("ascii")
             headers["Message"] = f"=?UTF-8?B?{b64}?="
 
-        if filename_header is not None:
-            headers["Filename"] = filename_header
+        if payload.filename_header is not None:
+            headers["Filename"] = payload.filename_header
 
         # adding priority
         headers["Priority"] = priority.value
@@ -251,14 +273,14 @@ def push(
         if dry_run == DryRun.off:
             response = _session.put(
                 f"{url}/{topic}",
-                data=data,
+                data=payload.data,
                 headers=headers,
                 timeout=10,
             )
             if not response.ok:
                 # If HTTP 429, don't block the thread; buffer it asynchronously
                 if int(response.status_code) == 429:
-                    if _buffer_429(topic, url, data, headers, buffer):
+                    if _buffer_429(topic, url, payload.data, headers, buffer):
                         return
                     raise NtfyError(response.status_code, response.reason)
 
@@ -266,6 +288,6 @@ def push(
                 raise NtfyError(response.status_code, response.reason)
         elif dry_run == DryRun.error:
             if getattr(requests, "_SIMULATE_429", False):
-                if _buffer_429(topic, url, data, headers, buffer):
+                if _buffer_429(topic, url, payload.data, headers, buffer):
                     return
             raise NtfyError(-1, "DryRun.error passed as argument")
