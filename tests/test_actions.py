@@ -1,10 +1,7 @@
-import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
 
 from ntfy_lite.actions import Action, HttpAction, HttpMethod, ViewAction
-
 
 
 def test_action_init(mock_validators):
@@ -20,7 +17,9 @@ def test_action_init(mock_validators):
         assert action.clear is False
 
         # Test with clear=True
-        action_clear = Action("test_action", "Test Label", "https://example.com", clear=True)
+        action_clear = Action(
+            "test_action", "Test Label", "https://example.com", clear=True
+        )
         assert action_clear.clear is True
 
         # Test URL validation call
