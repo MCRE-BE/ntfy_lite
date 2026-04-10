@@ -28,11 +28,12 @@ logging.basicConfig(
 import logging
 import os
 import typing
+import warnings
 from pathlib import Path
 
-import warnings
 try:
     from .buffer import NtfyBuffer
+
     _HAS_BUFFER = True
 except ImportError:
     _HAS_BUFFER = False
@@ -106,7 +107,9 @@ class NtfyHandler(logging.Handler):
 
         self._buffer = None
 
-        disable_buffer_env = os.environ.get("NTFY_LITE_DISABLE_BUFFER", "0").lower() in ("1", "true")
+        disable_buffer_env = os.environ.get(
+            "NTFY_LITE_DISABLE_BUFFER", "0"
+        ).lower() in ("1", "true")
 
         if db_path is not False and not disable_buffer_env:
             if db_path is None or db_path is True:
@@ -169,7 +172,11 @@ class NtfyHandler(logging.Handler):
         except KeyError:
             tags = ()
         try:
-            title = record.extra.get("logger_name") if hasattr(record, "extra") is not None else record.name
+            title = (
+                record.extra.get("logger_name")
+                if hasattr(record, "extra") is not None
+                else record.name
+            )
             push(
                 topic=self._topic,
                 title=title,
