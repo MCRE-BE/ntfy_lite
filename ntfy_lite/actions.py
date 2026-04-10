@@ -4,6 +4,7 @@
 - HttpAction
 """
 
+import abc
 import typing
 import sys
 if sys.version_info >= (3, 11):
@@ -15,7 +16,7 @@ from enum import Enum, auto
 from .utils import validate_url
 
 
-class Action:
+class Action(abc.ABC):
     """
     Superclass for action buttons.
 
@@ -29,19 +30,24 @@ class Action:
     """
 
     def __init__(self, action: str, label: str, url: str, clear: bool = False):
-        validate_url("Action.url", url)
+        validate_url("url", url)
 
         self.action = action
         self.label = label
         self.url = url
-        if clear:
-            self.clear = "true"
-        else:
-            self.clear = "false"
+        self.clear = clear
 
     def _str(self, attrs: typing.Tuple[str, ...]) -> str:
         values = {attr: getattr(self, attr) for attr in attrs}
-        return ", ".join([self.action] + [f"{attr}={value}" for attr, value in values.items() if value is not None])
+        parts = [self.action]
+        for attr in attrs:
+            value = values[attr]
+            if value is None:
+                continue
+            if isinstance(value, bool):
+                value = str(value).lower()
+            parts.append(f"{attr}={value}")
+        return ", ".join(parts)
 
 
 class ViewAction(Action):
