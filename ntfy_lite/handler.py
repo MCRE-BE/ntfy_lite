@@ -26,12 +26,14 @@ logging.basicConfig(
 # Import Statement #
 ####################
 import logging
+import os
 import typing
+import warnings
 from pathlib import Path
 
-import warnings
 try:
     from .buffer import NtfyBuffer
+
     _HAS_BUFFER = True
 except ImportError:
     _HAS_BUFFER = False
@@ -63,7 +65,7 @@ class NtfyHandler(logging.Handler):
         level2filepath: dict[LoggingLevel, Path] | None = None,
         level2email: dict[LoggingLevel, str] | None = None,
         dry_run: DryRun = DryRun.off,
-        db_path: Path | None = None,
+        db_path: Path | str | bool | None = None,
     ):
         """Start.
 
@@ -104,18 +106,33 @@ class NtfyHandler(logging.Handler):
         self._twice_in_a_row = twice_in_a_row
 
         self._buffer = None
-        if db_path is not None:
+
+        # ...Activate or deactive NTFY Buffering
+        disable_buffer_env = os.environ.get("NTFY_LITE_DISABLE_BUFFER", "0").lower()
+        disable_buffer_env = disable_buffer_env in ("1", "true")
+
+        if db_path is not False and not disable_buffer_env:
+            if db_path is None or db_path is True:
+                db_path = Path.home() / ".ntify" / "ntfy_buffer.sqlite"
+            elif isinstance(db_path, str):
+                db_path = Path(db_path)
+
             if _HAS_BUFFER:
+                try:
+                    db_path.parent.mkdir(parents=True, exist_ok=True)
+                except Exception:
+                    pass
                 self._buffer = NtfyBuffer(db_path)
             else:
                 msg = (
-                    "Buffering requested (db_path provided) but 'pysqlite3' is not installed. "
+                    "Buffering requested (db_path provided or default) but 'pysqlite3' or 'sqlite3' is not available. "
                     "Run 'pip install ntfy_lite[buffer]' to enable this feature. "
                     "Buffering will be disabled."
                 )
                 warnings.warn(msg, UserWarning)
                 logging.info(msg)
 
+        # ... Check logging level's
         for logging_level in level2priority:
             if logging_level not in self._level2priority:
                 raise ValueError(
@@ -156,7 +173,11 @@ class NtfyHandler(logging.Handler):
         except KeyError:
             tags = ()
         try:
-            title = record.extra.get("logger_name") if hasattr(record, "extra") is not None else record.name
+            title = (
+                record.extra.get("logger_name")
+                if hasattr(record, "extra") is not None
+                else record.name
+            )
             push(
                 topic=self._topic,
                 title=title,
