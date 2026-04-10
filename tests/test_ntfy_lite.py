@@ -358,14 +358,17 @@ def test_handler_disable_db_path_env(monkeypatch):
     handler = ntfy.NtfyHandler("test_topic")
     assert handler._buffer is None
 
+
 def test_long_message_truncation_and_attachment(monkeypatch):
     """Test that a long message is truncated and the full message is sent as an attachment."""
+
     class MockResponse:
         ok = True
         status_code = 200
         reason = "OK"
 
     call_args = []
+
     def mock_put(*args, **kwargs):
         if hasattr(kwargs.get("data"), "read"):
             kwargs["data"] = kwargs["data"].read().decode("utf-8")
@@ -392,6 +395,7 @@ def test_long_message_truncation_and_attachment(monkeypatch):
 
     assert "Message" in headers
     import base64
+
     encoded_val = headers["Message"]
     assert encoded_val.startswith("=?UTF-8?B?")
     assert encoded_val.endswith("?=")

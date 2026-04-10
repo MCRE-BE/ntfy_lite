@@ -40,6 +40,7 @@ _session = requests.Session()
 @dataclass
 class _DataPayload:
     """Holds the resulting payload and headers for pushing to ntfy."""
+
     data: typing.Union[typing.IO, str]
     message_header: str | None = None
     filename_header: str | None = None
@@ -103,7 +104,9 @@ class _DataManager:
                 self._payload.message_header = truncated_str
 
                 # 2. Write the complete, un-truncated string to a temporary file.
-                tf = tempfile.NamedTemporaryFile(delete=False, suffix=".txt", prefix="traceback_")
+                tf = tempfile.NamedTemporaryFile(
+                    delete=False, suffix=".txt", prefix="traceback_"
+                )
                 tf.write(msg_bytes)
                 tf.flush()
                 tf.seek(0)
@@ -115,9 +118,9 @@ class _DataManager:
                 self._payload.filename_header = "traceback.txt"
             else:
                 # The message fits within limits, we can send it directly as the HTTP body.
-                self._payload.data = message.encode(encoding="latin-1", errors="replace").decode(
-                    encoding="latin-1"
-                )
+                self._payload.data = message.encode(
+                    encoding="latin-1", errors="replace"
+                ).decode(encoding="latin-1")
 
     def __enter__(self) -> _DataPayload:
         return self._payload
@@ -249,7 +252,9 @@ def push(
 
         if payload.message_header is not None:
             # use RFC 2047 base64 encoding to support newlines and utf-8 securely
-            b64 = base64.b64encode(payload.message_header.encode("utf-8")).decode("ascii")
+            b64 = base64.b64encode(payload.message_header.encode("utf-8")).decode(
+                "ascii"
+            )
             headers["Message"] = f"=?UTF-8?B?{b64}?="
 
         if payload.filename_header is not None:
