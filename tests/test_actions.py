@@ -1,15 +1,4 @@
-# ruff: noqa: E402
-
-# INITIAL IMPORT
-import sys
-from unittest.mock import MagicMock
-
-# Initial mock to allow importing ntfy_lite
-# This needs to run before importing ntfy_lite
-mock_validators = MagicMock()
-mock_validators.url.return_value = True
-sys.modules["validators"] = mock_validators
-sys.modules["requests"] = MagicMock()
+from unittest.mock import patch
 
 import pytest
 
@@ -17,12 +6,14 @@ from ntfy_lite.actions import Action, HttpAction, HttpMethod, ViewAction
 
 
 @pytest.fixture(autouse=True)
-def reset_mocks():
-    mock_validators.reset_mock()
-    mock_validators.url.return_value = True
+def mock_validators():
+    """Mock the validators module used in ntfy_lite.utils."""
+    with patch("ntfy_lite.utils.validators") as mock:
+        mock.url.return_value = True
+        yield mock
 
 
-def test_action_init():
+def test_action_init(mock_validators):
     """Test Action base class initialization."""
     # Test with clear=False (default)
     action = Action("test_action", "Test Label", "https://example.com")
