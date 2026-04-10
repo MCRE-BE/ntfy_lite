@@ -62,3 +62,7 @@ def run():
         tags="hourglass",
         email=email,
     )
+
+
+if __name__ == "__main__":
+    run()

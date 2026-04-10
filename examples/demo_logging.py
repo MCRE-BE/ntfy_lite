@@ -144,3 +144,7 @@ def run() -> None:
             _run(logfile)
         except Exception as e:
             print(f"failed with error: {e}")
+
+
+if __name__ == "__main__":
+    run()

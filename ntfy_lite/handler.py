@@ -31,6 +31,7 @@ import typing
 import warnings
 from pathlib import Path
 
+
 try:
     from .buffer import NtfyBuffer
 

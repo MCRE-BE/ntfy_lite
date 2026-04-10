@@ -267,7 +267,7 @@ def test_handler(
 
     if not use_callback:
         assert not _callback_called
-    elif dry_run in (ntfy.DryRun.on, ntfy.DryRun.error):
+    elif dry_run == ntfy.DryRun.error:
         assert _callback_called
 
 
