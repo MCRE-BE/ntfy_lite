@@ -11,7 +11,6 @@ from pathlib import Path
 
 import requests
 
-
 from .actions import Action
 
 try:
@@ -21,7 +20,6 @@ except ImportError:
 from .error import NtfyError
 from .ntfy2logging import Priority
 from .utils import validate_url
-
 
 ###########
 # CLASSES #
@@ -108,6 +106,29 @@ class DryRun(Enum):
     on = auto()
     off = auto()
     error = auto()
+
+
+def _buffer_429(
+    topic: str,
+    url: str | None,
+    data: typing.Union[typing.IO, str],
+    headers: typing.Dict[str, str],
+    buffer: NtfyBuffer | None,
+) -> bool:
+    """Helper to handle HTTP 429 buffering logic."""
+    if buffer is None:
+        return False
+
+    logging.warning(
+        f"NTFY rate limit exceeded (HTTP 429) for '{topic}'. Buffering message."
+    )
+    data_str = (
+        data
+        if isinstance(data, str)
+        else "Original file attachment was not buffered due to HTTP 429."
+    )
+    buffer.add(topic, str(url), data_str, headers)
+    return True
 
 
 def push(
@@ -205,36 +226,22 @@ def push(
         # sending
         if dry_run == DryRun.off:
             response = _session.put(
-                f"{url}/{topic}", data=data, headers=headers, timeout=10
+                f"{url}/{topic}",
+                data=data,
+                headers=headers,
+                timeout=10,
             )
             if not response.ok:
                 # If HTTP 429, don't block the thread; buffer it asynchronously
                 if int(response.status_code) == 429:
-                    logging.warning(
-                        f"NTFY rate limit exceeded (HTTP 429) for '{topic}'. Buffering message."
-                    )
-                    if buffer is not None:
-                        data_str = (
-                            data
-                            if isinstance(data, str)
-                            else "Original file attachment was not buffered due to HTTP 429."
-                        )
-                        buffer.add(topic, url, data_str, headers)
+                    if _buffer_429(topic, url, data, headers, buffer):
                         return
                     raise NtfyError(response.status_code, response.reason)
 
                 # Normal error, raise
                 raise NtfyError(response.status_code, response.reason)
         elif dry_run == DryRun.error:
-            if getattr(requests, "_SIMULATE_429", False) and buffer is not None:
-                logging.warning(
-                    f"NTFY rate limit exceeded (HTTP 429) for '{topic}'. Buffering message."
-                )
-                data_str = (
-                    data
-                    if isinstance(data, str)
-                    else "Original file attachment was not buffered due to HTTP 429."
-                )
-                buffer.add(topic, url, data_str, headers)
-                return
+            if getattr(requests, "_SIMULATE_429", False):
+                if _buffer_429(topic, url, data, headers, buffer):
+                    return
             raise NtfyError(-1, "DryRun.error passed as argument")
