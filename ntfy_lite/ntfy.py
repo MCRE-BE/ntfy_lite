@@ -3,7 +3,10 @@
 ####################
 # IMPORT STATEMENT #
 ####################
+import base64
 import logging
+import os
+import tempfile
 import traceback
 import typing
 from enum import Enum, auto
@@ -35,59 +38,76 @@ _session = requests.Session()
 class _DataManager:
     """The data.
 
-    The data pushed to ntfy is either a message (str) or the content of
-    a file (i.e. file attachment, see https://ntfy.sh/docs/publish/#attachments).
-    An instance of _DataManager ensures that at least message or filepath is not None and
-    that only either message or filepath is not None. The context manager
-    returns either the message string or the opened file, and ensure the file is closed
-    (if data is a file).
+    The data pushed to ntfy is either a message, a file, or both.
+    If the message is very long (e.g., a traceback), this manager will automatically
+    truncate it to fit within ntfy's character limits and attach the full message as a file.
     """
 
     def __init__(
         self,
-        message: str | None,
+        message: typing.Any,
         filepath: Path | None,
     ) -> None:
-        # checking the user is at least pushing a message
-        # or a file attachment
-        if not any((message, filepath)):
+        if message is None and filepath is None:
             raise ValueError(
                 "must push either a message or a filepath (no message nor filepath argument specified)"
             )
 
-        # checking the user is not pushing both a message
-        # and a file attachment
-        if all((message, filepath)):
-            raise ValueError("can not push a message and a filepath at the same time.")
-
-        # if pushing a file attachment, making
-        # sure the file exists
         if filepath is not None and not filepath.is_file():
             raise FileNotFoundError(f"failed to find file to attach ({filepath})")
 
-        # self._data is either a file to the filepath,
-        # or the str corresponding to message
-        self._data: typing.Union[typing.IO, str]
-        if filepath is not None:
-            self._data = open(filepath, "rb")  # noqa: SIM115
-        elif message is not None and isinstance(message, str):
-            self._data = message.encode(encoding="latin-1", errors="replace").decode(
-                encoding="latin-1"
-            )
-        elif message is not None and not isinstance(message, str):
+        self._file_to_close: typing.IO | None = None
+        self._temp_file_path: str | None = None
+
+        self.data: typing.Union[typing.IO, str] = ""
+        self.message_header: str | None = None
+        self.filename_header: str | None = None
+
+        if message is not None and not isinstance(message, str):
             message = "".join(
                 traceback.TracebackException.from_exception(message).format()
             )
-            self._data = message.encode(encoding="latin-1", errors="replace").decode(
-                encoding="latin-1"
-            )
 
-    def __enter__(self) -> typing.Union[typing.IO, str]:
-        return self._data
+        if filepath is not None:
+            self._file_to_close = open(filepath, "rb")  # noqa: SIM115
+            self.data = self._file_to_close
+            if message is not None:
+                self.message_header = message
+        elif message is not None:
+            msg_bytes = message.encode("utf-8")
+            if len(msg_bytes) > 4000:
+                truncated_str = (
+                    msg_bytes[:1000].decode("utf-8", "ignore")
+                    + "\n... [truncated] ...\n"
+                    + msg_bytes[-2900:].decode("utf-8", "ignore")
+                )
+                self.message_header = truncated_str
+
+                tf = tempfile.NamedTemporaryFile(delete=False, suffix=".txt", prefix="traceback_")
+                tf.write(msg_bytes)
+                tf.flush()
+                tf.seek(0)
+
+                self._file_to_close = tf
+                self._temp_file_path = tf.name
+                self.data = self._file_to_close
+                self.filename_header = "traceback.txt"
+            else:
+                self.data = message.encode(encoding="latin-1", errors="replace").decode(
+                    encoding="latin-1"
+                )
+
+    def __enter__(self) -> typing.Tuple[typing.Union[typing.IO, str], str | None, str | None]:
+        return self.data, self.message_header, self.filename_header
 
     def __exit__(self, _, __, ___) -> None:
-        if not isinstance(self._data, str):
-            self._data.close()
+        if self._file_to_close is not None:
+            self._file_to_close.close()
+        if self._temp_file_path is not None:
+            try:
+                os.remove(self._temp_file_path)
+            except OSError:
+                pass
 
 
 class DryRun(Enum):
@@ -134,7 +154,7 @@ def _buffer_429(
 def push(
     topic: str,
     title: str,
-    message: str | None = None,
+    message: typing.Any = None,
     priority: Priority = Priority.DEFAULT,
     tags: typing.Union[str, typing.Iterable[str]] = [],
     click: str | None = None,
@@ -182,13 +202,9 @@ def push(
       dry_run: for testing purposes, see [ntfy_lite.ntfy.DryRun][]
     """
 
-    # the message manager:
-    # - checks that either message or filepath is not None
-    # - if filepath is not None, data is a file to the path
-    # - else data is the UTF-8 conversion of message
-    # This context manager makes sure that data get closed
-    # (if a file)
-    with _DataManager(message, filepath) as data:
+    # the message manager handles files and long messages,
+    # ensuring files are closed after sending.
+    with _DataManager(message, filepath) as (data, message_header, filename_header):
         # checking that arguments that are expected to be
         # urls are urls
         urls = {"click": click, "attach": attach, "icon": icon}
@@ -207,6 +223,14 @@ def push(
             "Icon": icon,
         }
         headers = {key: value for key, value in direct_mapping.items() if value}
+
+        if message_header is not None:
+            # use RFC 2047 base64 encoding to support newlines and utf-8 securely
+            b64 = base64.b64encode(message_header.encode("utf-8")).decode("ascii")
+            headers["Message"] = f"=?UTF-8?B?{b64}?="
+
+        if filename_header is not None:
+            headers["Filename"] = filename_header
 
         # adding priority
         headers["Priority"] = priority.value

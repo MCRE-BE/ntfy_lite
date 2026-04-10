@@ -1,35 +1,28 @@
 import sys
 from unittest.mock import MagicMock, patch
 
-# Initial mock to allow importing ntfy_lite
-mock_validators = MagicMock()
-mock_validators.url.return_value = True
-sys.modules["validators"] = mock_validators
-sys.modules["requests"] = MagicMock()
-
 import pytest
 from ntfy_lite.actions import Action, ViewAction, HttpAction, HttpMethod
 
-@pytest.fixture(autouse=True)
-def reset_mocks():
-    mock_validators.reset_mock()
-    mock_validators.url.return_value = True
 
 def test_action_init():
     """Test Action base class initialization."""
-    # Test with clear=False (default)
-    action = Action("test_action", "Test Label", "https://example.com")
-    assert action.action == "test_action"
-    assert action.label == "Test Label"
-    assert action.url == "https://example.com"
-    assert action.clear is False
+    with patch("validators.url") as mock_url:
+        mock_url.return_value = True
 
-    # Test with clear=True
-    action_clear = Action("test_action", "Test Label", "https://example.com", clear=True)
-    assert action_clear.clear is True
+        # Test with clear=False (default)
+        action = Action("test_action", "Test Label", "https://example.com")
+        assert action.action == "test_action"
+        assert action.label == "Test Label"
+        assert action.url == "https://example.com"
+        assert action.clear is False
 
-    # Test URL validation call
-    mock_validators.url.assert_called_with("https://example.com")
+        # Test with clear=True
+        action_clear = Action("test_action", "Test Label", "https://example.com", clear=True)
+        assert action_clear.clear is True
+
+        # Test URL validation call
+        mock_url.assert_called_with("https://example.com")
 
 def test_action_str_helper():
     """Test Action._str helper method."""
