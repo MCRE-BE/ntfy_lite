@@ -1,29 +1,35 @@
 from unittest.mock import patch
 
+import pytest
 
 from ntfy_lite.actions import Action, HttpAction, HttpMethod, ViewAction
 
 
+@pytest.fixture(autouse=True)
+def mock_validators():
+    """Mock the validators module used in ntfy_lite.utils."""
+    with patch("ntfy_lite.utils.validators") as mock:
+        mock.url.return_value = True
+        yield mock
+
+
 def test_action_init(mock_validators):
     """Test Action base class initialization."""
-    with patch("validators.url") as mock_url:
-        mock_url.return_value = True
+    # Test with clear=False (default)
+    action = Action("test_action", "Test Label", "https://example.com")
+    assert action.action == "test_action"
+    assert action.label == "Test Label"
+    assert action.url == "https://example.com"
+    assert action.clear is False
 
-        # Test with clear=False (default)
-        action = Action("test_action", "Test Label", "https://example.com")
-        assert action.action == "test_action"
-        assert action.label == "Test Label"
-        assert action.url == "https://example.com"
-        assert action.clear is False
+    # Test with clear=True
+    action_clear = Action(
+        "test_action", "Test Label", "https://example.com", clear=True
+    )
+    assert action_clear.clear is True
 
-        # Test with clear=True
-        action_clear = Action(
-            "test_action", "Test Label", "https://example.com", clear=True
-        )
-        assert action_clear.clear is True
-
-        # Test URL validation call
-        mock_url.assert_called_with("https://example.com")
+    # Test URL validation call
+    mock_validators.url.assert_called_with("https://example.com")
 
 
 def test_action_str_helper():

@@ -272,7 +272,7 @@ def test_handler(
 
 
 def test_rate_limit_buffering_and_logging(monkeypatch, tmp_path):
-    """Test that HTTP 429 triggers buffering and logs via loguru."""
+    """Test that HTTP 429 triggers buffering and logs via standard logging."""
 
     # --- Classes ---
     class MockResponse:
@@ -293,8 +293,12 @@ def test_rate_limit_buffering_and_logging(monkeypatch, tmp_path):
 
     logs = []
     test_handler = ListHandler()
-    logger = logging.getLogger()
-    logger.addHandler(test_handler)
+    # Get the named logger from ntfy_lite.ntfy
+    from ntfy_lite.ntfy import logger as ntfy_logger
+
+    ntfy_logger.addHandler(test_handler)
+    original_level = ntfy_logger.level
+    ntfy_logger.setLevel(logging.DEBUG)
 
     topic = "ntfy_test_rate_limit"
     title = "Test 429"
@@ -312,7 +316,8 @@ def test_rate_limit_buffering_and_logging(monkeypatch, tmp_path):
         buffer=buffer,
     )
 
-    logger.removeHandler(test_handler)
+    ntfy_logger.removeHandler(test_handler)
+    ntfy_logger.setLevel(original_level)
     assert any("NTFY rate limit exceeded (HTTP 429)" in log for log in logs), (
         "Expected rate limit warning in logs."
     )
@@ -386,7 +391,6 @@ def test_long_message_truncation_and_attachment(monkeypatch):
     data = kwargs["data"]
 
     assert "Message" in headers
-    # Decode the RFC 2047 Base64
     import base64
     encoded_val = headers["Message"]
     assert encoded_val.startswith("=?UTF-8?B?")
@@ -398,6 +402,4 @@ def test_long_message_truncation_and_attachment(monkeypatch):
     assert len(decoded_msg) < 4500
 
     assert headers["Filename"] == "traceback.txt"
-
-    # Read data (should be a temporary file containing the full long_msg)
     assert data == long_msg
