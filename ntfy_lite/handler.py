@@ -164,7 +164,7 @@ class NtfyHandler(logging.Handler):
             message = None
         except KeyError:
             filepath = None
-            message = record.msg
+            message = self.format(record)
         try:
             email = self._level2email[record.levelno]
         except KeyError:
