@@ -1,4 +1,4 @@
-""" ntfy lite: notification push examples """
+"""ntfy lite: notification push examples"""
 
 import tempfile
 from pathlib import Path

@@ -289,7 +289,7 @@ def test_rate_limit_buffering_and_logging(monkeypatch, tmp_path):
         return MockResponse()
 
     # --- Variables ---
-    monkeypatch.setattr("requests.put", mock_put)
+    monkeypatch.setattr("requests.Session.put", mock_put)
 
     logs = []
     test_handler = ListHandler()
