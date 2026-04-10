@@ -177,7 +177,7 @@ def _buffer_429(
 def push(
     topic: str,
     title: str,
-    message: typing.Any = None,
+    message: typing.Any | None = None,
     priority: Priority = Priority.DEFAULT,
     tags: typing.Union[str, typing.Iterable[str]] = [],
     click: str | None = None,
