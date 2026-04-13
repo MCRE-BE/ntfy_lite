@@ -7,20 +7,16 @@
 import json
 import logging
 import sqlite3
-import sys
 import threading
 import time
 from pathlib import Path
-
+import sys
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
 
 import requests
-
-_session = requests.Session()
-logger = logging.getLogger("ntfy_lite")
 
 
 ###########
@@ -81,7 +77,7 @@ class NtfyBuffer:
                     )
                 """)
         except Exception:
-            logger.exception("Failed to initialize ntfy SQLite buffer")
+            logging.exception("Failed to initialize ntfy SQLite buffer")
 
     def add(
         self: Self,
@@ -104,7 +100,7 @@ class NtfyBuffer:
                 )
             self._trigger_buffer_flush()
         except Exception:
-            logger.exception("Failed to buffer NTFY message")
+            logging.exception("Failed to buffer NTFY message")
 
     def _flush_buffer_thread(self: Self) -> None:
         """Background worker that reads from the SQLite buffer and retries messages.
@@ -120,9 +116,7 @@ class NtfyBuffer:
         try:
             with sqlite3.connect(str(self.db_path), timeout=10) as conn:
                 cursor = conn.cursor()
-                cursor.execute(
-                    "SELECT id, topic, url, headers, data FROM buffer ORDER BY created_at ASC"
-                )
+                cursor.execute("SELECT id, topic, url, headers, data FROM buffer ORDER BY created_at ASC")
                 rows = cursor.fetchall()
 
             for row_id, topic, url, headers_json, data in rows:
@@ -131,30 +125,26 @@ class NtfyBuffer:
                 try:
                     headers = json.loads(headers_json)
 
-                    response = _session.put(
-                        f"{url}/{topic}", data=data, headers=headers, timeout=10
-                    )
+                    response = requests.put(f"{url}/{topic}", data=data, headers=headers, timeout=10)
                     if response.ok:
                         with sqlite3.connect(str(self.db_path), timeout=10) as conn:
                             conn.execute("DELETE FROM buffer WHERE id = ?", (row_id,))
                     elif int(response.status_code) == 429:
                         # Still rate limited; stop flushing so we don't spam the server further
-                        logger.warning(
-                            "NTFY buffer fast retry rate limited (HTTP 429). Will stop flusher."
-                        )
+                        logging.warning("NTFY buffer fast retry rate limited (HTTP 429). Will stop flusher.")
                         break
                     else:
                         # Some other failure, discard the buffered message and log the trace
-                        logger.error(
+                        logging.error(
                             f"NTFY async retry failed: {response.reason}. Discarding buffered message id {row_id}."
                         )
                         with sqlite3.connect(str(self.db_path), timeout=10) as conn:
                             conn.execute("DELETE FROM buffer WHERE id = ?", (row_id,))
                 except Exception:
-                    logger.exception("NTFY async flusher exception.")
+                    logging.exception("NTFY async flusher exception.")
                     break  # Wait for next import to retry
         except Exception:
-            logger.exception("NTFY async flusher final exception fallback")
+            logging.exception("NTFY async flusher final exception fallback")
         finally:
             with self._flusher_lock:
                 self._flusher_state["running"] = False

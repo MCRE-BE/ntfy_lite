@@ -10,9 +10,8 @@ import tempfile
 import typing
 from pathlib import Path
 
-import pytest
-
 import ntfy_lite as ntfy
+import pytest
 from ntfy_lite.buffer import NtfyBuffer
 
 
@@ -81,9 +80,7 @@ def test_icon_push():
     topic = "ntfy_lite_test"
     title = "ntfy lite test mimimal push"
     message = "ntfy lite test mimimal push: message"
-    icon = (
-        "https://styles.redditmedia.com/t5_32uhe/styles/communityIcon_xnt6chtnr2j21.png"
-    )
+    icon = "https://styles.redditmedia.com/t5_32uhe/styles/communityIcon_xnt6chtnr2j21.png"
     ntfy.push(topic, title, icon=icon, message=message, dry_run=True)
 
 
@@ -213,9 +210,7 @@ def test_handler(
 ):
     """Test handler behavior with varying configuration."""
     topic = "ntfy_lite handler test"
-    record = logging.LogRecord(
-        "test record", logging_level, "", -1, "record message", None, None
-    )
+    record = logging.LogRecord("test record", logging_level, "", -1, "record message", None, None)
 
     global _callback_called
     _callback_called = False
@@ -267,12 +262,12 @@ def test_handler(
 
     if not use_callback:
         assert not _callback_called
-    elif dry_run == ntfy.DryRun.error:
+    elif dry_run in (ntfy.DryRun.on, ntfy.DryRun.error):
         assert _callback_called
 
 
 def test_rate_limit_buffering_and_logging(monkeypatch, tmp_path):
-    """Test that HTTP 429 triggers buffering and logs via standard logging."""
+    """Test that HTTP 429 triggers buffering and logs via loguru."""
 
     # --- Classes ---
     class MockResponse:
@@ -289,16 +284,12 @@ def test_rate_limit_buffering_and_logging(monkeypatch, tmp_path):
         return MockResponse()
 
     # --- Variables ---
-    monkeypatch.setattr("requests.Session.put", mock_put)
+    monkeypatch.setattr("requests.put", mock_put)
 
     logs = []
     test_handler = ListHandler()
-    # Get the named logger from ntfy_lite.ntfy
-    from ntfy_lite.ntfy import logger as ntfy_logger
-
-    ntfy_logger.addHandler(test_handler)
-    original_level = ntfy_logger.level
-    ntfy_logger.setLevel(logging.DEBUG)
+    logger = logging.getLogger()
+    logger.addHandler(test_handler)
 
     topic = "ntfy_test_rate_limit"
     title = "Test 429"
@@ -316,11 +307,8 @@ def test_rate_limit_buffering_and_logging(monkeypatch, tmp_path):
         buffer=buffer,
     )
 
-    ntfy_logger.removeHandler(test_handler)
-    ntfy_logger.setLevel(original_level)
-    assert any("NTFY rate limit exceeded (HTTP 429)" in log for log in logs), (
-        "Expected rate limit warning in logs."
-    )
+    logger.removeHandler(test_handler)
+    assert any("NTFY rate limit exceeded (HTTP 429)" in log for log in logs), "Expected rate limit warning in logs."
 
     # Verify that the SQLite buffer has been updated
     with sqlite3.connect(str(db_path)) as conn:
@@ -330,80 +318,3 @@ def test_rate_limit_buffering_and_logging(monkeypatch, tmp_path):
         assert len(rows) > 0, "Expected buffered message in SQLite database."
         # Clean up
         conn.execute("DELETE FROM buffer WHERE topic = ?", (topic,))
-
-
-def test_handler_default_db_path(monkeypatch, tmp_path):
-    from pathlib import Path
-
-    home_dir = tmp_path / "home"
-    home_dir.mkdir()
-    monkeypatch.setattr(Path, "home", lambda: home_dir)
-
-    # Ensure environment is clear
-    monkeypatch.delenv("NTFY_LITE_DISABLE_BUFFER", raising=False)
-
-    handler = ntfy.NtfyHandler("test_topic", twice_in_a_row=False)
-    assert handler._buffer is not None
-    assert handler._buffer.db_path == home_dir / ".ntify" / "ntfy_buffer.sqlite"
-
-
-def test_handler_disable_db_path_arg(monkeypatch):
-    monkeypatch.delenv("NTFY_LITE_DISABLE_BUFFER", raising=False)
-    handler = ntfy.NtfyHandler("test_topic", db_path=False)
-    assert handler._buffer is None
-
-
-def test_handler_disable_db_path_env(monkeypatch):
-    monkeypatch.setenv("NTFY_LITE_DISABLE_BUFFER", "1")
-    handler = ntfy.NtfyHandler("test_topic")
-    assert handler._buffer is None
-
-
-def test_long_message_truncation_and_attachment(monkeypatch):
-    """Test that a long message is truncated and the full message is sent as an attachment."""
-
-    class MockResponse:
-        ok = True
-        status_code = 200
-        reason = "OK"
-
-    call_args = []
-
-    def mock_put(*args, **kwargs):
-        if hasattr(kwargs.get("data"), "read"):
-            kwargs["data"] = kwargs["data"].read().decode("utf-8")
-        call_args.append((args, kwargs))
-        return MockResponse()
-
-    monkeypatch.setattr("requests.Session.put", mock_put)
-
-    topic = "ntfy_test_long_message"
-    title = "Test long message"
-    long_msg = "A" * 4500
-
-    ntfy.push(
-        topic,
-        title,
-        message=long_msg,
-        dry_run=ntfy.DryRun.off,
-    )
-
-    assert len(call_args) == 1
-    args, kwargs = call_args[0]
-    headers = kwargs["headers"]
-    data = kwargs["data"]
-
-    assert "Message" in headers
-    import base64
-
-    encoded_val = headers["Message"]
-    assert encoded_val.startswith("=?UTF-8?B?")
-    assert encoded_val.endswith("?=")
-    b64_part = encoded_val[10:-2]
-    decoded_msg = base64.b64decode(b64_part).decode("utf-8")
-
-    assert "[truncated]" in decoded_msg
-    assert len(decoded_msg) < 4500
-
-    assert headers["Filename"] == "traceback.txt"
-    assert data == long_msg

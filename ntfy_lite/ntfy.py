@@ -3,20 +3,15 @@
 ####################
 # IMPORT STATEMENT #
 ####################
-import base64
 import logging
-import os
-import tempfile
 import traceback
 import typing
-from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
 
 import requests
 
 from .actions import Action
-
 try:
     from .buffer import NtfyBuffer
 except ImportError:
@@ -25,115 +20,58 @@ from .error import NtfyError
 from .ntfy2logging import Priority
 from .utils import validate_url
 
-logger = logging.getLogger("ntfy_lite")
-
 
 ###########
 # CLASSES #
 ###########
-# Use a shared Session object to enable urllib3 connection pooling.
-# This significantly reduces latency (by skipping repeated TLS handshakes)
-# when pushing multiple notifications to the same ntfy server host.
-_session = requests.Session()
-
-
-@dataclass
-class _DataPayload:
-    """Holds the resulting payload and headers for pushing to ntfy."""
-
-    data: typing.Union[typing.IO, str]
-    message_header: str | None = None
-    filename_header: str | None = None
-
-
 class _DataManager:
-    """The data manager.
+    """The data.
 
-    The payload pushed to ntfy can be a message, a file, or both simultaneously.
-    When pushing both, ntfy receives the file in the HTTP body and the text in the `Message` HTTP header.
-
-    If the text message is very long (e.g., a traceback), ntfy will normally reject it or
-    auto-convert it to an attachment without a text preview. To prevent this, this manager
-    will truncate large messages to fit within limits, and attach the full un-truncated
-    message as a temporary text file, providing the user with both a preview and the full text.
+    The data pushed to ntfy is either a message (str) or the content of
+    a file (i.e. file attachment, see https://ntfy.sh/docs/publish/#attachments).
+    An instance of _DataManager ensures that at least message or filepath is not None and
+    that only either message or filepath is not None. The context manager
+    returns either the message string or the opened file, and ensure the file is closed
+    (if data is a file).
     """
 
     def __init__(
         self,
-        message: typing.Any | None,
+        message: str | None,
         filepath: Path | None,
     ) -> None:
-        if message is None and filepath is None:
-            raise ValueError(
-                "must push either a message or a filepath (no message nor filepath argument specified)"
-            )
+        # checking the user is at least pushing a message
+        # or a file attachment
+        if not any((message, filepath)):
+            raise ValueError("must push either a message or a filepath (no message nor filepath argument specified)")
 
+        # checking the user is not pushing both a message
+        # and a file attachment
+        if all((message, filepath)):
+            raise ValueError("can not push a message and a filepath at the same time.")
+
+        # if pushing a file attachment, making
+        # sure the file exists
         if filepath is not None and not filepath.is_file():
             raise FileNotFoundError(f"failed to find file to attach ({filepath})")
 
-        self._file_to_close: typing.IO | None = None
-        self._temp_file_path: str | None = None
-        self._payload = _DataPayload(data="")
-
-        # Format any non-string objects (like Exceptions) into a readable traceback string
-        if message is not None and not isinstance(message, str):
-            message = "".join(
-                traceback.TracebackException.from_exception(message).format()
-            )
-
+        # self._data is either a file to the filepath,
+        # or the str corresponding to message
+        self._data: typing.Union[typing.IO, str]
         if filepath is not None:
-            # If a file is explicitly provided by the user, we upload it as the HTTP body.
-            self._file_to_close = open(filepath, "rb")  # noqa: SIM115
-            self._payload.data = self._file_to_close
-            if message is not None:
-                # The text message must be placed in the HTTP header since the body is occupied.
-                self._payload.message_header = message
-        elif message is not None:
-            # We only have a text message.
-            msg_bytes = message.encode("utf-8")
+            self._data = open(filepath, "rb")  # noqa: SIM115
+        elif message is not None and isinstance(message, str):
+            self._data = message.encode(encoding="latin-1", errors="replace").decode(encoding="latin-1")
+        elif message is not None and not isinstance(message, str):
+            message = "".join(traceback.TracebackException.from_exception(message).format())
+            self._data = message.encode(encoding="latin-1", errors="replace").decode(encoding="latin-1")
 
-            # If the text exceeds 4000 bytes, ntfy converts the whole thing to an attachment.
-            # We bypass this by intentionally truncating the text and generating our own attachment.
-            if len(msg_bytes) > 4000:
-                # 1. Truncate the text message to keep the most relevant parts (the start and end).
-                truncated_str = (
-                    msg_bytes[:1000].decode("utf-8", "ignore")
-                    + "\n... [truncated] ...\n"
-                    + msg_bytes[-2900:].decode("utf-8", "ignore")
-                )
-                self._payload.message_header = truncated_str
-
-                # 2. Write the complete, un-truncated string to a temporary file.
-                tf = tempfile.NamedTemporaryFile(
-                    delete=False, suffix=".txt", prefix="traceback_"
-                )
-                tf.write(msg_bytes)
-                tf.flush()
-                tf.seek(0)
-
-                # 3. Queue the temporary file to be uploaded in the HTTP body.
-                self._file_to_close = tf
-                self._temp_file_path = tf.name
-                self._payload.data = self._file_to_close
-                self._payload.filename_header = "traceback.txt"
-            else:
-                # The message fits within limits, we can send it directly as the HTTP body.
-                self._payload.data = message.encode(
-                    encoding="latin-1", errors="replace"
-                ).decode(encoding="latin-1")
-
-    def __enter__(self) -> _DataPayload:
-        return self._payload
+    def __enter__(self) -> typing.Union[typing.IO, str]:
+        return self._data
 
     def __exit__(self, _, __, ___) -> None:
-        # Cleanup any opened file handles or temporary files after the request has been sent.
-        if self._file_to_close is not None:
-            self._file_to_close.close()
-        if self._temp_file_path is not None:
-            try:
-                os.remove(self._temp_file_path)
-            except OSError:
-                pass
+        if not isinstance(self._data, str):
+            self._data.close()
 
 
 class DryRun(Enum):
@@ -154,33 +92,10 @@ class DryRun(Enum):
     error = auto()
 
 
-def _buffer_429(
-    topic: str,
-    url: str | None,
-    data: typing.Union[typing.IO, str],
-    headers: typing.Dict[str, str],
-    buffer: NtfyBuffer | None,
-) -> bool:
-    """Helper to handle HTTP 429 buffering logic."""
-    if buffer is None:
-        return False
-
-    logger.warning(
-        f"NTFY rate limit exceeded (HTTP 429) for '{topic}'. Buffering message."
-    )
-    data_str = (
-        data
-        if isinstance(data, str)
-        else "Original file attachment was not buffered due to HTTP 429."
-    )
-    buffer.add(topic, str(url), data_str, headers)
-    return True
-
-
 def push(
     topic: str,
     title: str,
-    message: typing.Any | None = None,
+    message: str | None = None,
     priority: Priority = Priority.DEFAULT,
     tags: typing.Union[str, typing.Iterable[str]] = [],
     click: str | None = None,
@@ -228,9 +143,13 @@ def push(
       dry_run: for testing purposes, see [ntfy_lite.ntfy.DryRun][]
     """
 
-    # the message manager handles files and long messages,
-    # ensuring files are closed after sending.
-    with _DataManager(message, filepath) as payload:
+    # the message manager:
+    # - checks that either message or filepath is not None
+    # - if filepath is not None, data is a file to the path
+    # - else data is the UTF-8 conversion of message
+    # This context manager makes sure that data get closed
+    # (if a file)
+    with _DataManager(message, filepath) as data:
         # checking that arguments that are expected to be
         # urls are urls
         urls = {"click": click, "attach": attach, "icon": icon}
@@ -250,16 +169,6 @@ def push(
         }
         headers = {key: value for key, value in direct_mapping.items() if value}
 
-        if payload.message_header is not None:
-            # use RFC 2047 base64 encoding to support newlines and utf-8 securely
-            b64 = base64.b64encode(payload.message_header.encode("utf-8")).decode(
-                "ascii"
-            )
-            headers["Message"] = f"=?UTF-8?B?{b64}?="
-
-        if payload.filename_header is not None:
-            headers["Filename"] = payload.filename_header
-
         # adding priority
         headers["Priority"] = priority.value
 
@@ -277,23 +186,29 @@ def push(
 
         # sending
         if dry_run == DryRun.off:
-            response = _session.put(
-                f"{url}/{topic}",
-                data=payload.data,
-                headers=headers,
-                timeout=10,
-            )
+            response = requests.put(f"{url}/{topic}", data=data, headers=headers, timeout=10)
             if not response.ok:
                 # If HTTP 429, don't block the thread; buffer it asynchronously
                 if int(response.status_code) == 429:
-                    if _buffer_429(topic, url, payload.data, headers, buffer):
+                    logging.warning(f"NTFY rate limit exceeded (HTTP 429) for '{topic}'. Buffering message.")
+                    if buffer is not None:
+                        data_str = (
+                            data
+                            if isinstance(data, str)
+                            else "Original file attachment was not buffered due to HTTP 429."
+                        )
+                        buffer.add(topic, url, data_str, headers)
                         return
                     raise NtfyError(response.status_code, response.reason)
 
                 # Normal error, raise
                 raise NtfyError(response.status_code, response.reason)
         elif dry_run == DryRun.error:
-            if getattr(requests, "_SIMULATE_429", False):
-                if _buffer_429(topic, url, payload.data, headers, buffer):
-                    return
+            if getattr(requests, "_SIMULATE_429", False) and buffer is not None:
+                logging.warning(f"NTFY rate limit exceeded (HTTP 429) for '{topic}'. Buffering message.")
+                data_str = (
+                    data if isinstance(data, str) else "Original file attachment was not buffered due to HTTP 429."
+                )
+                buffer.add(topic, url, data_str, headers)
+                return
             raise NtfyError(-1, "DryRun.error passed as argument")
