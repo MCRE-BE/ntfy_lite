@@ -14,18 +14,12 @@ You may run these examples by running after installation:
 ## pushing notifications
 
 ``` py
---8<-- "examples/demo_push.py"
-```
-
-## async buffering
-
-``` py
---8<-- "examples/demo_buffer.py"
+--8<-- "ntfy_lite/demo_push.py"
 ```
 
 ## logging handler
 
 ``` py
---8<-- "examples/demo_logging.py"
+--8<-- "ntfy_lite/demo_logging.py"
 ```
 

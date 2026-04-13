@@ -1,4 +1,4 @@
-"""ntfy lite: notification push examples"""
+""" ntfy lite: notification push examples """
 
 import tempfile
 from pathlib import Path
@@ -62,7 +62,3 @@ def run():
         tags="hourglass",
         email=email,
     )
-
-
-if __name__ == "__main__":
-    run()
