@@ -357,3 +357,53 @@ def test_handler_disable_db_path_env(monkeypatch):
     monkeypatch.setenv("NTFY_LITE_DISABLE_BUFFER", "1")
     handler = ntfy.NtfyHandler("test_topic")
     assert handler._buffer is None
+
+
+def test_long_message_truncation_and_attachment(monkeypatch):
+    """Test that a long message is truncated and the full message is sent as an attachment."""
+
+    class MockResponse:
+        ok = True
+        status_code = 200
+        reason = "OK"
+
+    call_args = []
+
+    def mock_put(*args, **kwargs):
+        if hasattr(kwargs.get("data"), "read"):
+            kwargs["data"] = kwargs["data"].read().decode("utf-8")
+        call_args.append((args, kwargs))
+        return MockResponse()
+
+    monkeypatch.setattr("requests.Session.put", mock_put)
+
+    topic = "ntfy_test_long_message"
+    title = "Test long message"
+    long_msg = "A" * 4500
+
+    ntfy.push(
+        topic,
+        title,
+        message=long_msg,
+        dry_run=ntfy.DryRun.off,
+    )
+
+    assert len(call_args) == 1
+    args, kwargs = call_args[0]
+    headers = kwargs["headers"]
+    data = kwargs["data"]
+
+    assert "Message" in headers
+    import base64
+
+    encoded_val = headers["Message"]
+    assert encoded_val.startswith("=?UTF-8?B?")
+    assert encoded_val.endswith("?=")
+    b64_part = encoded_val[10:-2]
+    decoded_msg = base64.b64decode(b64_part).decode("utf-8")
+
+    assert "[truncated]" in decoded_msg
+    assert len(decoded_msg) < 4500
+
+    assert headers["Filename"] == "traceback.txt"
+    assert data == long_msg
