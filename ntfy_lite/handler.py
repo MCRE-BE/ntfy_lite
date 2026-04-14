@@ -75,23 +75,30 @@ class NtfyHandler(logging.Handler):
     ):
         """Start.
 
-        Arguments
-        ---------
-        topic: Topic on which the notifications will be pushed.
-        url: https://ntfy.sh by default.
-        twice_in_a_row: If False, if several similar records (similar: same name
-            and same message) are emitted, only the first one will result in notification
-            being pushed (to avoid the channel to reach the accepted limits of notifications).
-        error_callback: It will be called if a NtfyError is raised when pushing a notification.
-        level2tags: mapping between logging level and tags to be associated with the notification
-        level2priority: mapping between the logging level and the notification priority.
-        level2filepath: If for the logging level of the record a corresponding filepath is set,
-            the notification will contain no message but a correspondinf file attachment
-            (be aware of the size limits, see https://ntfy.sh/docs/publish/#attach-local-file).
-        level2email: If an email address is specified for the logging level of the record,
-            the ntfy notification will also request a mail to be sent.
-        dry_run: For testing. If 'on', no notification will be sent. If 'error', no notification will be sent,
-            instead a NtfyError are raised.
+        Parameters
+        ----------
+        topic : str
+            Topic on which the notifications will be pushed.
+        url : str, optional
+            https://ntfy.sh by default.
+        twice_in_a_row : bool, optional
+            If False, if several similar records (similar: same name and same message) are emitted, only the first one will result in notification being pushed (to avoid the channel to reach the accepted limits of notifications).
+        error_callback : Callable[[Exception], Any] | None, optional
+            It will be called if a NtfyError is raised when pushing a notification.
+        level2tags : dict[int, tuple[str, ...]], optional
+            mapping between logging level and tags to be associated with the notification
+        level2priority : dict[int, Priority], optional
+            mapping between the logging level and the notification priority.
+        level2filepath : dict[int, Path] | None, optional
+            If for the logging level of the record a corresponding filepath is set, the notification will contain no message but a correspondinf file attachment (be aware of the size limits, see https://ntfy.sh/docs/publish/#attach-local-file).
+        level2email : dict[int, str] | None, optional
+            If an email address is specified for the logging level of the record, the ntfy notification will also request a mail to be sent.
+        dry_run : DryRun, optional
+            For testing. If 'on', no notification will be sent. If 'error', no notification will be sent, instead a NtfyError are raised.
+        db_path : Path | str | bool | None, optional
+            Database path for the buffer.
+        formatter : Formatter | None, optional
+            Formatter for payloads.
         """
 
         # ... checks ...

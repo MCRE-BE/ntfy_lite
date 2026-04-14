@@ -9,10 +9,12 @@ def validate_url(attribute: str, value: str | None) -> None:
     Return None if value is a valid URL or is None,
     raises a ValueError otherwise.
 
-    Args:
-      attribute: an arbitrary string, used in the message of the
-        raised ValueError
-      value: the string to check
+    Parameters
+    ----------
+    attribute : str
+        an arbitrary string, used in the message of the raised ValueError.
+    value : str | None
+        the string to check.
     """
     if value is None:
         return

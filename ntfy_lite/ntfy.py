@@ -192,24 +192,40 @@ def push(  # noqa: C901, PLR0912
     For more documentation of all arguments, visit:
     [https://ntfy.sh/docs/publish/](https://ntfy.sh/docs/publish/)
 
-    Args:
-    topic: the ntfy topic on which to publish
-    title: the title of the notification
-    message: the message. It is optional and if None, then a filepath argument must be provided instead.
-    priority: the priority of the notification
-    tags (i.e. emojis): either a string (a single tag) or a list of string (several tags). see [supported emojis](https://docs.ntfy.sh)
-    click: URL link to be included in the notification
-    email: address to which the notification should also be sent
-    filepath: path to the file to be sent as attachement.
-        It is optional and if None, then a message argument must be provided instead.
-    icon: URL to an icon to include in the notification
-    actions: An action is either a [ntfy_lite.actions.ViewAction][]
-        (i.e. a link to a website) or a [ntfy_lite.actions.HttpAction][]
-        (i.e. sending of a HTTP GET, POST or PUT request to a website)
-    at: to be used for delayed notification, see [scheduled delivery](https://ntfy.sh/docs/publish/#scheduled-delivery)
-    url: ntfy server
-    dry_run: for testing purposes, see [ntfy_lite.ntfy.DryRun][]
-    formatter: define how large payloads are formatted (e.g. TruncationFormatter or AttachmentFormatter)
+    Parameters
+    ----------
+    topic : str
+        the ntfy topic on which to publish
+    title : str
+        the title of the notification
+    message : Any | None, optional
+        the message. It is optional and if None, then a filepath argument must be provided instead.
+    priority : Priority, optional
+        the priority of the notification
+    tags : str | Iterable[str] | None, optional
+        (i.e. emojis): either a string (a single tag) or a list of string (several tags). see [supported emojis](https://docs.ntfy.sh)
+    click : str | None, optional
+        URL link to be included in the notification
+    email : str | None, optional
+        address to which the notification should also be sent
+    filepath : Path | None, optional
+        path to the file to be sent as attachment. It is optional and if None, then a message argument must be provided instead.
+    attach : str | None, optional
+        URL to an image/attachment to include in the notification
+    icon : str | None, optional
+        URL to an icon to include in the notification
+    actions : Action | Sequence[Action], optional
+        An action is either a [ntfy_lite.actions.ViewAction][] (i.e. a link to a website) or a [ntfy_lite.actions.HttpAction][] (i.e. sending of a HTTP GET, POST or PUT request to a website)
+    at : str | None, optional
+        to be used for delayed notification, see [scheduled delivery](https://ntfy.sh/docs/publish/#scheduled-delivery)
+    url : str | None, optional
+        ntfy server
+    dry_run : DryRun, optional
+        for testing purposes, see [ntfy_lite.ntfy.DryRun][]
+    buffer : Any | None, optional
+        Buffer object for retrying messages on HTTP 429
+    formatter : Formatter | None, optional
+        define how large payloads are formatted (e.g. TruncationFormatter or AttachmentFormatter)
     """
 
     # the message manager handles files and long messages,

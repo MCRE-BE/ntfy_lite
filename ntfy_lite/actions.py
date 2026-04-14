@@ -30,12 +30,16 @@ class Action:
     --------
     [ntfy button action documentation](https://ntfy.sh/docs/publish/#action-buttons)
 
-    Arguments
-    ---------
-    action: name of the action (e.g. 'view', 'http')
-    label: description of the action
-    url: where the action redirects
-    clear: if true, the notification is deleted upon click
+    Parameters
+    ----------
+    action : str
+        Name of the action (e.g. 'view', 'http').
+    label : str
+        Description of the action.
+    url : str
+        Where the action redirects.
+    clear : bool, optional
+        If true, the notification is deleted upon click. Defaults to False.
     """
 
     def __init__(
@@ -70,9 +74,14 @@ class ViewAction(Action):
     --------
     See: [ntfy view action](https://ntfy.sh/docs/publish/#open-websiteapp)
 
-    Arguments
-    ---------
-    For arguments: see documentation of the [ntfy_lite.actions.Action][] superclass
+    Parameters
+    ----------
+    label : str
+        Description of the action.
+    url : str
+        Where the action redirects.
+    clear : bool, optional
+        If true, the notification is deleted upon click. Defaults to False.
     """
 
     def __init__(
@@ -108,20 +117,20 @@ class HttpAction(Action):
     --------
     See: [ntfy http action](https://ntfy.sh/docs/publish/#send-http-request)
 
-    Arguments
-    ---------
-    label: str
-        arbitrary string
-    url: str
-        url to which the request should be sent
-    clear: bool, by default=False
-        if the ntfy notification should be cleared after the request succeeds
-    method: HttpMethod, by default HttpMethod.GET
-        GET, POST or PUT
-    headers: collections.abc.Mapping[str, str | None], by default = None
-        HTTP headers to be passed in the request
-    body: str | None, by default = None
-        HTTP body
+    Parameters
+    ----------
+    label : str
+        Arbitrary string description.
+    url : str
+        URL to which the request should be sent.
+    clear : bool, optional
+        If the ntfy notification should be cleared after the request succeeds. Defaults to False.
+    method : HttpMethod, optional
+        HTTP method to use (GET, POST or PUT). Defaults to HttpMethod.GET.
+    headers : Mapping[str, str], optional
+        HTTP headers to be passed in the request. Defaults to None.
+    body : str, optional
+        HTTP body content. Defaults to None.
     """
 
     def __init__(

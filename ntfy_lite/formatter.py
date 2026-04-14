@@ -27,14 +27,22 @@ class Formatter(abc.ABC):
         self: Self,
         message: str,
     ) -> dict[str, typing.Any]:
-        """Process the message string and return a dictionary of propertiesto be applied to the DataPayload.
+        """Process the message string and return properties for the DataPayload.
 
-        Must return a dict that can include:
-        - data: typing.Union[typing.IO, str] (The HTTP body)
-        - message_header: str | None (The Message HTTP header)
-        - filename_header: str | None (The Filename HTTP header)
-        - file_to_close: typing.IO | None (File handle to close after send)
-        - temp_file_path: str | None (Temporary file to delete after send)
+        Parameters
+        ----------
+        message : str
+            The message string to be formatted and processed.
+
+        Returns
+        -------
+        dict[str, typing.Any]
+            A dictionary that can include:
+            - data: typing.Union[typing.IO, str] (The HTTP body)
+            - message_header: str | None (The Message HTTP header)
+            - filename_header: str | None (The Filename HTTP header)
+            - file_to_close: typing.IO | None (File handle to close after send)
+            - temp_file_path: str | None (Temporary file to delete after send)
         """
 
 
