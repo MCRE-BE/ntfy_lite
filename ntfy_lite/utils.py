@@ -1,6 +1,6 @@
 """Module defining the function 'validate_url'."""
 
-import validators
+import urllib.parse
 
 
 def validate_url(attribute: str, value: str | None) -> None:
@@ -16,6 +16,7 @@ def validate_url(attribute: str, value: str | None) -> None:
     """
     if value is None:
         return
-    if validators.url(value) is not True:
+    parsed = urllib.parse.urlparse(value)
+    if not parsed.scheme or not parsed.netloc:
         raise ValueError(f"the value for {attribute} ({value}) is not an url")
     return

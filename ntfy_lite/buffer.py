@@ -7,10 +7,11 @@
 import json
 import logging
 import sqlite3
+import sys
 import threading
 import time
 from pathlib import Path
-import sys
+
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -51,7 +52,7 @@ class NtfyBuffer:
                      folder that persists across executions (like your standard logging
                      directory) so messages survive unexpected application shutdowns.
         """
-        self.db_path = db_path
+        self.db_path = Path(db_path)
         self._flusher_lock = threading.Lock()
         self._flusher_state = {"running": False}
         self._init_db()
