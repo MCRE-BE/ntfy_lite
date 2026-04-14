@@ -3,6 +3,7 @@
 ####################
 # IMPORT STATEMENT #
 ####################
+import typing
 from unittest.mock import patch
 
 import pytest
@@ -14,7 +15,7 @@ from ntfy_lite.actions import Action, HttpAction, HttpMethod, ViewAction
 # INDIVIDUAL TESTS #
 ####################
 @pytest.fixture(autouse=True)
-def mock_validators():
+def mock_validators() -> typing.Any:
     """Mock the urllib.parse module used in ntfy_lite.utils."""
     with patch("ntfy_lite.utils.urllib.parse") as mock:
         mock.urlparse.return_value.scheme = "https"
@@ -22,7 +23,7 @@ def mock_validators():
         yield mock
 
 
-def test_action_init(mock_validators):
+def test_action_init(mock_validators: typing.Any) -> None:
     """Test Action base class initialization."""
     # Test with clear=False (default)
     action = Action("test_action", "Test Label", "https://example.com")
@@ -39,7 +40,7 @@ def test_action_init(mock_validators):
     mock_validators.urlparse.assert_called_with("https://example.com")
 
 
-def test_action_str_helper():
+def test_action_str_helper() -> None:
     """Test Action._str helper method."""
     action = Action("test_action", "Test Label", "https://example.com", clear=False)
     attrs = ("label", "url", "clear")
@@ -47,12 +48,12 @@ def test_action_str_helper():
     assert result == "test_action, label=Test Label, url=https://example.com, clear=false"
 
     # Test with some None values (should be skipped)
-    action.test_attr = None
+    setattr(action, "test_attr", None)  # noqa: B010
     result_with_none = action._str(("label", "test_attr"))
     assert result_with_none == "test_action, label=Test Label"
 
 
-def test_view_action_init():
+def test_view_action_init() -> None:
     """Test ViewAction initialization."""
     action = ViewAction("View Website", "https://is.mpg.de", clear=True)
     assert action.action == "view"
@@ -61,13 +62,13 @@ def test_view_action_init():
     assert action.clear == "true"
 
 
-def test_view_action_str():
+def test_view_action_str() -> None:
     """Test ViewAction __str__ method."""
     action = ViewAction("View Website", "https://is.mpg.de")
     assert str(action) == "view, label=View Website, url=https://is.mpg.de, clear=false"
 
 
-def test_http_action_init():
+def test_http_action_init() -> None:
     """Test HttpAction initialization."""
     headers = {"Authorization": "Bearer token"}
     body = '{"key": "value"}'
@@ -86,7 +87,7 @@ def test_http_action_init():
     assert action.body == body
 
 
-def test_http_action_str():
+def test_http_action_str() -> None:
     """Test HttpAction __str__ method."""
     # Test without headers
     action_no_headers = HttpAction("Get Data", "https://api.example.com", method=HttpMethod.GET)

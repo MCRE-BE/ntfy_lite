@@ -4,18 +4,7 @@ import logging
 import typing
 from enum import Enum
 
-LoggingLevel = typing.Literal[
-    logging.DEBUG,
-    logging.INFO,
-    logging.NOTSET,
-    logging.WARNING,
-    logging.ERROR,
-    logging.CRITICAL,
-]
-"""
-Union of all logging levels (DEBUG, INFO, NOTSET,
-WARNING, ERROR and CRITICAL)
-"""
+LoggingLevel = int
 
 
 class Priority(Enum):
