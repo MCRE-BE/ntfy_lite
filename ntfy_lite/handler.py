@@ -1,5 +1,4 @@
-"""
-Module defining the NtfyHandler class.
+"""Module defining the NtfyHandler class.
 
 The NtfyHandler is a logging handler, i.e. an handler suitable for the
 [python logging package](https://docs.python.org/3/library/logging.html)
@@ -25,20 +24,28 @@ logging.basicConfig(
 ####################
 # Import Statement #
 ####################
+import contextlib
 import logging
+import os
+import sys
 import typing
+import warnings
 from pathlib import Path
 
-import warnings
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 try:
     from .buffer import NtfyBuffer
+
     _HAS_BUFFER = True
 except ImportError:
     _HAS_BUFFER = False
 
-from .defaults import level2tags
+from .config import Priority, level2priority, level2tags
+from .formatter import Formatter
 from .ntfy import DryRun, push
-from .ntfy2logging import LoggingLevel, Priority, level2priority
 
 
 ###########
@@ -53,35 +60,37 @@ class NtfyHandler(logging.Handler):
     """
 
     def __init__(
-        self,
+        self: Self,
         topic: str,
         url: str = "https://ntfy.sh",
         twice_in_a_row: bool = True,
         error_callback: typing.Callable[[Exception], typing.Any] | None = None,
-        level2tags: dict[LoggingLevel, tuple[str, ...]] = level2tags,
-        level2priority: dict[LoggingLevel, Priority] = level2priority,
-        level2filepath: dict[LoggingLevel, Path] | None = None,
-        level2email: dict[LoggingLevel, str] | None = None,
+        level2tags: dict[int, tuple[str, ...]] = level2tags,
+        level2priority: dict[int, Priority] = level2priority,
+        level2filepath: dict[int, Path] | None = None,
+        level2email: dict[int, str] | None = None,
         dry_run: DryRun = DryRun.off,
         db_path: Path | None = None,
+        formatter: Formatter | None = None,
     ):
         """Start.
 
-        Args:
-          topic: Topic on which the notifications will be pushed.
-          url: https://ntfy.sh by default.
-          twice_in_a_row: If False, if several similar records (similar: same name
+        Arguments
+        ---------
+        topic: Topic on which the notifications will be pushed.
+        url: https://ntfy.sh by default.
+        twice_in_a_row: If False, if several similar records (similar: same name
             and same message) are emitted, only the first one will result in notification
             being pushed (to avoid the channel to reach the accepted limits of notifications).
-          error_callback: It will be called if a NtfyError is raised when pushing a notification.
-          level2tags: mapping between logging level and tags to be associated with the notification
-          level2priority: mapping between the logging level and the notification priority.
-          level2filepath: If for the logging level of the record a corresponding filepath is set,
+        error_callback: It will be called if a NtfyError is raised when pushing a notification.
+        level2tags: mapping between logging level and tags to be associated with the notification
+        level2priority: mapping between the logging level and the notification priority.
+        level2filepath: If for the logging level of the record a corresponding filepath is set,
             the notification will contain no message but a correspondinf file attachment
             (be aware of the size limits, see https://ntfy.sh/docs/publish/#attach-local-file).
-          level2email: If an email address is specified for the logging level of the record,
+        level2email: If an email address is specified for the logging level of the record,
             the ntfy notification will also request a mail to be sent.
-          dry_run: For testing. If 'on', no notification will be sent. If 'error', no notification will be sent,
+        dry_run: For testing. If 'on', no notification will be sent. If 'error', no notification will be sent,
             instead a NtfyError are raised.
         """
 
@@ -91,31 +100,45 @@ class NtfyHandler(logging.Handler):
 
         # ... Init ...
         super().__init__()
-        self._url = url
-        self._topic = topic
+        self._url: str = url
+        self._topic: str = topic
         self._last_messages: dict[str, str] | None
         self._last_messages = None if twice_in_a_row else {}
-        self._level2tags = level2tags
-        self._level2priority = level2priority
-        self._level2filepath = level2filepath
-        self._level2email = level2email
-        self._error_callback = error_callback
-        self._dry_run = dry_run
-        self._twice_in_a_row = twice_in_a_row
+        self._level2tags: dict[int, tuple[str, ...]] = level2tags
+        self._level2priority: dict[int, Priority] = level2priority
+        self._level2filepath: dict[int, Path] | dict[typing.Any, typing.Any] = level2filepath
+        self._level2email: dict[int, str] | dict[typing.Any, typing.Any] = level2email
+        self._error_callback: typing.Callable[[Exception], typing.Any] | None = error_callback
+        self._dry_run: DryRun = dry_run
+        self._twice_in_a_row: bool = twice_in_a_row
+        self._formatter: Formatter | None = formatter
 
-        self._buffer = None
-        if db_path is not None:
+        self._buffer: typing.Any | None = None
+
+        # ...Activate or deactive NTFY Buffering
+        disable_buffer_env = os.environ.get("NTFY_LITE_DISABLE_BUFFER", "0").lower()
+        disable_buffer_env = disable_buffer_env in ("1", "true")
+
+        if db_path is not False and not disable_buffer_env:
+            if db_path is None or db_path is True:
+                db_path = Path.home() / ".ntify" / "ntfy_buffer.sqlite"
+            elif isinstance(db_path, str):
+                db_path = Path(db_path)
+
             if _HAS_BUFFER:
+                with contextlib.suppress(Exception):
+                    db_path.parent.mkdir(parents=True, exist_ok=True)
                 self._buffer = NtfyBuffer(db_path)
             else:
                 msg = (
-                    "Buffering requested (db_path provided) but 'pysqlite3' is not installed. "
+                    "Buffering requested (db_path provided or default) but 'pysqlite3' or 'sqlite3' is not available. "
                     "Run 'pip install ntfy_lite[buffer]' to enable this feature. "
                     "Buffering will be disabled."
                 )
-                warnings.warn(msg, UserWarning)
+                warnings.warn(msg, UserWarning, stacklevel=2)
                 logging.info(msg)
 
+        # ... Check logging level's
         for logging_level in level2priority:
             if logging_level not in self._level2priority:
                 raise ValueError(
@@ -146,7 +169,7 @@ class NtfyHandler(logging.Handler):
             message = None
         except KeyError:
             filepath = None
-            message = record.msg
+            message = self.format(record)
         try:
             email = self._level2email[record.levelno]
         except KeyError:
@@ -156,7 +179,11 @@ class NtfyHandler(logging.Handler):
         except KeyError:
             tags = ()
         try:
-            title = record.extra.get("logger_name") if hasattr(record, "extra") is not None else record.name
+            title = (
+                record.extra.get("logger_name", record.name)
+                if hasattr(record, "extra") and isinstance(record.extra, dict)
+                else record.name
+            )
             push(
                 topic=self._topic,
                 title=title,
@@ -168,6 +195,7 @@ class NtfyHandler(logging.Handler):
                 url=self._url,
                 dry_run=self._dry_run,
                 buffer=self._buffer,
+                formatter=self._formatter,
             )
         except Exception as e:
             logging.exception("NTFY Log Handler failed")
