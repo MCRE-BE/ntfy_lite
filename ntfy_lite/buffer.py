@@ -47,10 +47,12 @@ class NtfyBuffer:
     ) -> None:
         """Start the buffer, setting up its SQLite path.
 
-        Args:
-            db_path: The file path to the SQLite database. Ensure this path is in a
-                     folder that persists across executions (like your standard logging
-                     directory) so messages survive unexpected application shutdowns.
+        Parameters
+        ----------
+        db_path : Path
+            The file path to the SQLite database. Ensure this path is in a
+            folder that persists across executions (like your standard logging
+            directory) so messages survive unexpected application shutdowns.
         """
         self.db_path = Path(db_path)
         self._flusher_lock = threading.Lock()

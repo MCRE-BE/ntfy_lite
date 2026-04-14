@@ -20,8 +20,17 @@ class NtfyError(Exception):
 
     Attributes
     ----------
-      status_code: error code returned by the request
-      reason: reason of the failure
+    status_code : int
+        Error code returned by the request.
+    reason : str
+        Reason of the failure.
+
+    Parameters
+    ----------
+    status_code : int
+        Error code returned by the request.
+    reason : str
+        Reason of the failure.
     """
 
     def __init__(self: Self, status_code: int, reason: str):
