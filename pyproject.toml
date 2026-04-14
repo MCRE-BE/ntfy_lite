@@ -6,7 +6,7 @@ requires = [ "hatchling" ]
 # PROJECT #
 ## #########
 [project]
-name = "ntfy_lite"
+name = "ntfy-lite"
 version = "2.0.1"
 description = "minimalistic python API for sending ntfy notifications"
 readme = "README.md"
@@ -28,33 +28,30 @@ classifiers = [
 ]
 dependencies = [
   "requests>=2.28.2",
-  "validators>=0.20.0",
-  "typing-extensions>=4.0.0; python_version < '3.11'",
+  "typing-extensions>=4; python_version<'3.11'",
 ]
-
-[project.optional-dependencies]
-buffer = [
+optional-dependencies.buffer = [
   "pysqlite3",
 ]
-dev = [
-  "ntfy_lite[buffer,test,docs]",
+optional-dependencies.dev = [
   "basedpyright>0",
+  "ntfy-lite[buffer,docs,test]",
+  "prek",
   "ruff>0",
   "zensical",
-  "prek",
 ]
-test = [
-  "pytest>0",
-]
-docs = [
-  "zensical",
+optional-dependencies.docs = [
   "mkdocstrings[python]",
   "pymdown-extensions",
+  "zensical",
+]
+optional-dependencies.test = [
+  "pytest>0",
 ]
 
 [dependency-groups]
 dev = [
-  "ntfy_lite[dev]",
+  "ntfy-lite[dev]",
 ]
 
 ## #####
