@@ -1,12 +1,20 @@
 """Define errors."""
 
+# %%
+####################
+# Import Statement #
+####################
 import sys
+
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
 
 
+###########
+# CLASSES #
+###########
 class NtfyError(Exception):
     """Error thrown when the push of a notification fails.
 

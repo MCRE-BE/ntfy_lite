@@ -4,8 +4,13 @@
 - HttpAction
 """
 
-import typing
+# %%
+####################
+# Import Statement #
+####################
 import sys
+import typing
+
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -15,20 +20,31 @@ from enum import Enum, auto
 from .utils import validate_url
 
 
+###########
+# CLASSES #
+###########
 class Action:
+    """Superclass for action buttons.
+
+    See Also
+    --------
+    [ntfy button action documentation](https://ntfy.sh/docs/publish/#action-buttons)
+
+    Arguments
+    ---------
+    action: name of the action (e.g. 'view', 'http')
+    label: description of the action
+    url: where the action redirects
+    clear: if true, the notification is deleted upon click
     """
-    Superclass for action buttons.
 
-    See: [ntfy button action documentation](https://ntfy.sh/docs/publish/#action-buttons)
-
-    Args:
-      action: name of the action (e.g. 'view', 'http')
-      label: description of the action
-      url: where the action redirects
-      clear: if true, the notification is deleted upon click
-    """
-
-    def __init__(self, action: str, label: str, url: str, clear: bool = False):
+    def __init__(
+        self: Self,
+        action: str,
+        label: str,
+        url: str,
+        clear: bool = False,
+    ):
         validate_url("Action.url", url)
 
         self.action = action
@@ -39,7 +55,10 @@ class Action:
         else:
             self.clear = "false"
 
-    def _str(self, attrs: typing.Tuple[str, ...]) -> str:
+    def _str(
+        self: Self,
+        attrs: tuple[str, ...],
+    ) -> str:
         values = {attr: getattr(self, attr) for attr in attrs}
         return ", ".join([self.action] + [f"{attr}={value}" for attr, value in values.items() if value is not None])
 
@@ -99,14 +118,14 @@ class HttpAction(Action):
         if the ntfy notification should be cleared after the request succeeds
     method: HttpMethod, by default HttpMethod.GET
         GET, POST or PUT
-    headers: typing.Optional[typing.Mapping[str, str]], by default = None
+    headers: collections.abc.Mapping[str, str | None], by default = None
         HTTP headers to be passed in the request
-    body: typing.Optional[str], by default = None
+    body: str | None, by default = None
         HTTP body
     """
 
     def __init__(
-        self,
+        self: Self,
         label: str,
         url: str,
         clear: bool = False,
@@ -119,7 +138,7 @@ class HttpAction(Action):
         self.headers = headers
         self.body = body
 
-    def __str__(self) -> str:
+    def __str__(self: Self) -> str:
         _attrs = ("label", "url", "clear", "method", "body")
         main = self._str(_attrs)
         if not self.headers:
