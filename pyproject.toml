@@ -7,7 +7,7 @@ requires = [ "hatchling" ]
 ## #########
 [project]
 name = "ntfy-lite"
-version = "2.0.1"
+version = "2.0.2"
 description = "minimalistic python API for sending ntfy notifications"
 readme = "README.md"
 license-files = [ "LICENSE" ]
@@ -34,10 +34,10 @@ optional-dependencies.buffer = [
   "pysqlite3",
 ]
 optional-dependencies.dev = [
-  "basedpyright>0",
   "ntfy-lite[buffer,docs,test]",
   "prek",
   "ruff>0",
+  "ty>0",
   "zensical",
 ]
 optional-dependencies.docs = [

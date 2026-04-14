@@ -70,7 +70,7 @@ class NtfyHandler(logging.Handler):
         level2filepath: dict[int, Path] | None = None,
         level2email: dict[int, str] | None = None,
         dry_run: DryRun = DryRun.off,
-        db_path: Path | None = None,
+        db_path: Path | str | bool | None = None,
         formatter: Formatter | None = None,
     ):
         """Start.
@@ -179,11 +179,14 @@ class NtfyHandler(logging.Handler):
         except KeyError:
             tags = ()
         try:
-            title = (
-                record.extra.get("logger_name", record.name)
-                if hasattr(record, "extra") and isinstance(record.extra, dict)
-                else record.name
-            )
+            title = record.name
+            if hasattr(record, "extra") and isinstance(record.extra, dict) and "logger_name" in record.extra:
+                title = str(
+                    typing.cast(
+                        "dict[str, typing.Any]",
+                        record.extra,
+                    )["logger_name"]
+                )
             push(
                 topic=self._topic,
                 title=title,

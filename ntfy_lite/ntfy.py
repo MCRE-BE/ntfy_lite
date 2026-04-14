@@ -30,7 +30,7 @@ else:
 try:
     from .buffer import NtfyBuffer
 except ImportError:
-    NtfyBuffer = typing.Any
+    NtfyBuffer: typing.TypeAlias = typing.Any
 
 from .actions import Action
 from .config import Priority
