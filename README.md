@@ -18,6 +18,7 @@ Compared to the original `ntfy_lite`, this version introduces:
 - **Improved Logging Handler**: The `NtfyHandler` now supports non-blocking delivery when configured with a `buffer_path`.
 - **Modernized Codebase**: Support for Python 3.13+, improved typing using modern PEP standards, and a modernized build system (Hatch).
 - **Code Quality**: Integrated `ruff` for consistent style and linting.
+- **Message Formatters**: A module to tailor how and what the message displays has been implemented. `EmptyFormatter`, `AttachmentFormatter` and `TruncationFormatter` allow you to deal gracefully with character limit issues instead of losing messages or metadata.
 
 Original project documentation can be found [here](https://mpi-is.github.io/ntfy_lite/), and the original source is available [here](https://github.com/MPI-IS/ntfy_lite).
 
