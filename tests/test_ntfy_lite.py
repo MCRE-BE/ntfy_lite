@@ -1,4 +1,4 @@
-# ruff: noqa: ANN201, S101, ARG001, PLW0603, PT011
+# ruff: noqa: PT011
 """Tests."""
 
 ####################
@@ -10,8 +10,9 @@ import tempfile
 import typing
 from pathlib import Path
 
-import ntfy_lite as ntfy
 import pytest
+
+import ntfy_lite as ntfy
 from ntfy_lite.buffer import NtfyBuffer
 
 
@@ -167,7 +168,7 @@ def test_unicode_push():
 
 
 @pytest.mark.parametrize("clear", [True, False])
-def test_actions_view_http_push(clear):
+def test_actions_view_http_push(clear: bool):
     topic = "ntfy_lite_test"
     title = "ntfy lite test mimimal push"
     message = "ntfy lite test mimimal push: message"
@@ -192,7 +193,7 @@ def test_at_push():
 
 
 # required for mypy
-_callback_called: bool
+_callback_called: bool = False
 
 
 ################
@@ -203,8 +204,10 @@ _callback_called: bool
 @pytest.mark.parametrize("use_callback", [True, False])
 @pytest.mark.parametrize("dry_run", [ntfy.DryRun.on, ntfy.DryRun.error])
 def test_handler(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
     twice_in_a_row: bool,
-    logging_level: ntfy.LoggingLevel,
+    logging_level: int,
     use_callback: bool,
     dry_run: ntfy.DryRun,
 ):
@@ -212,12 +215,10 @@ def test_handler(
     topic = "ntfy_lite handler test"
     record = logging.LogRecord("test record", logging_level, "", -1, "record message", None, None)
 
-    global _callback_called
-    _callback_called = False
+    _callback_called = [False]
 
     def _callback(e: Exception) -> None:
-        global _callback_called
-        _callback_called = True
+        _callback_called[0] = True
 
     callback = _callback if use_callback else None
     logging.raiseExceptions = False
@@ -227,11 +228,11 @@ def test_handler(
         with open(filepath, "w") as f:
             f.write("test content")
 
-        level2tags: typing.Dict[ntfy.LoggingLevel, tuple[str, ...]] = {
+        level2tags: dict[ntfy.LoggingLevel, tuple[str, ...]] = {
             logging.ERROR: ("broken_heart",),
         }
 
-        level2priority: typing.Dict[ntfy.LoggingLevel, ntfy.Priority] = {
+        level2priority: dict[ntfy.LoggingLevel, ntfy.Priority] = {
             logging.CRITICAL: ntfy.Priority.MAX,
             logging.ERROR: ntfy.Priority.HIGH,
             logging.WARNING: ntfy.Priority.HIGH,
@@ -240,11 +241,11 @@ def test_handler(
             logging.NOTSET: ntfy.Priority.MIN,
         }
 
-        level2filepath: typing.Dict[ntfy.LoggingLevel, Path] = {
+        level2filepath: dict[ntfy.LoggingLevel, Path] = {
             logging.ERROR: filepath,
         }
 
-        level2email: typing.Dict[ntfy.LoggingLevel, str] = {
+        level2email: dict[ntfy.LoggingLevel, str] = {
             logging.ERROR: "mimolette@fromage.fr",
         }
 
@@ -252,22 +253,25 @@ def test_handler(
             topic,
             twice_in_a_row=twice_in_a_row,
             error_callback=callback,
-            level2tags=level2tags,
-            level2filepath=level2filepath,
-            level2priority=level2priority,
-            level2email=level2email,
+            level2tags=typing.cast("dict[int, tuple[str, ...]]", level2tags),
+            level2filepath=typing.cast("dict[int, Path]", level2filepath),
+            level2priority=typing.cast("dict[int, ntfy.Priority]", level2priority),
+            level2email=typing.cast("dict[int, str]", level2email),
             dry_run=dry_run,
         )
         handler.emit(record)
 
     if not use_callback:
-        assert not _callback_called
-    elif dry_run in (ntfy.DryRun.on, ntfy.DryRun.error):
-        assert _callback_called
+        assert not _callback_called[0]
+    elif dry_run == ntfy.DryRun.error:
+        assert _callback_called[0]
 
 
-def test_rate_limit_buffering_and_logging(monkeypatch, tmp_path):
-    """Test that HTTP 429 triggers buffering and logs via loguru."""
+def test_rate_limit_buffering_and_logging(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+):
+    """Test that HTTP 429 triggers buffering and logs via standard logging."""
 
     # --- Classes ---
     class MockResponse:
@@ -276,20 +280,27 @@ def test_rate_limit_buffering_and_logging(monkeypatch, tmp_path):
         reason = "Too Many Requests"
 
     class ListHandler(logging.Handler):
-        def emit(self, record) -> None:
+        def emit(
+            self,
+            record: logging.LogRecord,
+        ) -> None:
             logs.append(self.format(record))
 
     # --- Functions ---
-    def mock_put(*args, **kwargs) -> MockResponse:
+    def mock_put(*args: typing.Any, **kwargs) -> MockResponse:
         return MockResponse()
 
     # --- Variables ---
-    monkeypatch.setattr("requests.put", mock_put)
+    monkeypatch.setattr("requests.Session.put", mock_put)
 
     logs = []
     test_handler = ListHandler()
-    logger = logging.getLogger()
-    logger.addHandler(test_handler)
+    # Get the named logger from ntfy_lite.ntfy
+    from ntfy_lite.ntfy import logger as ntfy_logger
+
+    ntfy_logger.addHandler(test_handler)
+    original_level = ntfy_logger.level
+    ntfy_logger.setLevel(logging.DEBUG)
 
     topic = "ntfy_test_rate_limit"
     title = "Test 429"
@@ -307,7 +318,8 @@ def test_rate_limit_buffering_and_logging(monkeypatch, tmp_path):
         buffer=buffer,
     )
 
-    logger.removeHandler(test_handler)
+    ntfy_logger.removeHandler(test_handler)
+    ntfy_logger.setLevel(original_level)
     assert any("NTFY rate limit exceeded (HTTP 429)" in log for log in logs), "Expected rate limit warning in logs."
 
     # Verify that the SQLite buffer has been updated
@@ -318,3 +330,88 @@ def test_rate_limit_buffering_and_logging(monkeypatch, tmp_path):
         assert len(rows) > 0, "Expected buffered message in SQLite database."
         # Clean up
         conn.execute("DELETE FROM buffer WHERE topic = ?", (topic,))
+
+
+def test_handler_default_db_path(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+):
+    from pathlib import Path
+
+    home_dir = tmp_path / "home"
+    home_dir.mkdir()
+    monkeypatch.setattr(Path, "home", lambda: home_dir)
+
+    # Ensure environment is clear
+    monkeypatch.delenv("NTFY_LITE_DISABLE_BUFFER", raising=False)
+
+    handler = ntfy.NtfyHandler("test_topic", twice_in_a_row=False)
+    assert handler._buffer is not None
+    assert handler._buffer.db_path == home_dir / ".ntify" / "ntfy_buffer.sqlite"
+
+
+def test_handler_disable_db_path_arg(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.delenv("NTFY_LITE_DISABLE_BUFFER", raising=False)
+    handler = ntfy.NtfyHandler("test_topic", db_path=False)
+    assert handler._buffer is None
+
+
+def test_handler_disable_db_path_env(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("NTFY_LITE_DISABLE_BUFFER", "1")
+    handler = ntfy.NtfyHandler("test_topic")
+    assert handler._buffer is None
+
+
+def test_long_message_truncation_and_attachment(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Test that a long message is truncated and the full message is sent as an attachment."""
+
+    class MockResponse:
+        ok = True
+        status_code = 200
+        reason = "OK"
+
+    call_args = []
+
+    def mock_put(*args: typing.Any, **kwargs: typing.Any) -> MockResponse:
+        data = kwargs.get("data")
+        if data is not None and hasattr(data, "read"):
+            kwargs["data"] = data.read().decode("utf-8")
+        call_args.append((args, kwargs))
+        return MockResponse()
+
+    monkeypatch.setattr("requests.Session.put", mock_put)
+
+    topic = "ntfy_test_long_message"
+    title = "Test long message"
+    long_msg = "A" * 4500
+
+    ntfy.push(
+        topic,
+        title,
+        message=long_msg,
+        dry_run=ntfy.DryRun.off,
+    )
+
+    assert len(call_args) == 1
+    _, kwargs = call_args[0]
+    headers = kwargs["headers"]
+    data = kwargs["data"]
+
+    assert "Message" in headers
+    import base64
+
+    encoded_val = headers["Message"]
+    assert encoded_val.startswith("=?UTF-8?B?")
+    assert encoded_val.endswith("?=")
+    b64_part = encoded_val[10:-2]
+    decoded_msg = base64.b64decode(b64_part).decode("utf-8")
+
+    assert "[truncated]" in decoded_msg
+    assert len(decoded_msg) < 4500
+
+    assert headers["Filename"] == "traceback.txt"
+    assert data == long_msg
