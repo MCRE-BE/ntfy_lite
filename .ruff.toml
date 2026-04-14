@@ -1,0 +1,138 @@
+# Exclude a variety of commonly ignored directories.
+exclude = [
+".git",
+"__pycache__",
+"docs",
+"old",
+"_old",
+"build",
+"dist",
+"config.py",
+]
+# Same as Black.
+line-length = 120
+indent-width = 4
+extend-exclude = ["notebooks"]
+
+[format]
+preview = true
+
+[lint]
+exclude = ["__init__.py"]
+select = ["ALL"]
+ignore = [
+      #
+      # FULL MODULES
+      #
+      "DTZ", # flake8-datetimez (DTZ) on pypi
+      "ERA", # eradicate (ERA) on pypi
+      "PTH", # flake8-use-pathlib (PTH) on pypi
+      "G", # flake8-logging-format
+
+      #
+      # RULE BY RULE
+      #
+      "PLR0913", # Too many arguments in function definition
+      "PLR0911", # Too many return statements
+      "PLR0915", # Too many statements
+      "PLR2004", # magic-value-comparison (PLR2004)
+
+      "BLE001", # blind-except
+
+      "A001",  # Variable `__doc__` is shadowing a Python builtin
+      "PD010", # `.pivot_table` is preferred to `.pivot` or `.unstack`; provides same functionality
+
+      "E501", #  Line too long (82 > 79 characters) (E501)
+      "E701", #  multiple statements on one line (colon)
+
+      "D104", # Missing docstring in public package
+      "D105", # undocumented-magic-method
+      "D202", #  No blank lines allowed after function docstring
+      "D211", #  No blank lines allowed before class docstring
+      "D401", #  First line should be in imperative mood; try rephrasing
+
+      "E203", #  Whitespace before ":"
+      "E266", #  Too many leading "#" for block comment (E266)
+      "E402", #  module level import not at top of file
+
+      "LOG015",  # Checks for usages of the following logging top-level functions: debug, info, warn, warning, error, critical, log, exception.
+
+      "PLC0415", # Checks for import statements outside of a module's top-level scope
+
+      "RET504", # unnecessary-assign
+      "RUF022", # unsorted-dunder-all
+
+      "SLF001", # private-member-access
+
+      "TRY002", # raise-vanilla-class
+      "TC004",  # runtime-import-in-type-checking-block
+
+      # todo : fix later
+      "A001",  # Variable `format` is shadowing a Python builtin
+      "UP006", # [*] Use `list` instead of `List` for type annotation
+      "UP007", # Use `X | Y` for type annotations
+      "UP035", # `typing.List` is deprecated, use `list` instead
+
+      "W191",
+      "E111",
+      "E114",
+      "E117",
+      "E501",   # line too long
+      "B008",   # do not perform function calls in argument defaults
+      "D206",
+      "D300",
+      "Q000",
+      "Q001",
+      "Q002",
+      "Q003",
+      "COM812",
+      "COM819",
+      "TD003",
+      "PLR0913",
+      "PLR0917",
+      "TRY003",  # Avoid specifying long messages outside the exception class
+      "TC001",
+      "CPY001",
+      "D100", "D101", "D102", "D103", "D104", "D105", "D107", "D203", "D211", "D213",
+      "ANN001", "ANN002", "ANN003", "ANN204", "ANN401",
+      "FIX002",
+      "ISC001",
+      "DTZ003",
+      "FBT001", "FBT002",
+      "A002", "A003",
+      "EM101", "EM102",
+]
+
+[lint.pydocstyle]
+convention = "numpy"
+
+[lint.pycodestyle]
+max-line-length = 120
+
+[lint.mccabe]
+# Flag errors (`C901`) whenever the complexity level exceeds 12 (increase/decrease if needed).
+max-complexity = 12
+
+[lint.flake8-unused-arguments]
+# allow unused variadic arguments, like *args and **kwargs
+ignore-variadic-names = true
+
+[lint.extend-per-file-ignores]
+"**/tests/*" = [
+    "ARG001",
+    "D101",
+    "D102",
+    "D105",
+    "S101",
+    "ANN001",
+    "ANN201",
+    "ANN202",
+    "ANN204",
+    "ANN205",
+    "SLF001",
+    "PLR2004",
+    "PLR6301",
+    "PLW0108",
+    "FBT003",
+    "INP001",
+]

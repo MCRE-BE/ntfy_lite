@@ -14,10 +14,13 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - name: Set up Python
-        run: uv python install 3.13
-      - name: Run ruff
+          python-version: "3.13"
+      - name: Run ruff check
         run: uv run ruff check --output-format=github .
+      - name: Run ruff format
+        run: uv run ruff format --check .
+      - name: Run type checking
+        run: uv run basedpyright
 
   test:
     needs: lint
