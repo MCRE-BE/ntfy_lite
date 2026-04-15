@@ -3,11 +3,6 @@
 ####################
 # IMPORT STATEMENT #
 ####################
-"""Module defining the push method, which send a message or the content of a file to an NTFY channel."""
-
-####################
-# IMPORT STATEMENT #
-####################
 import base64
 import collections.abc
 import contextlib
@@ -27,12 +22,9 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-try:
-    from .buffer import NtfyBuffer
-except ImportError:
-    NtfyBuffer: typing.TypeAlias = typing.Any
 
 from .actions import Action
+from .buffer import NtfyBuffer
 from .config import Priority
 from .error import NtfyError
 from .formatter import AttachmentFormatter, Formatter
@@ -148,7 +140,7 @@ def _buffer_429(
     url: str | None,
     data: typing.IO[typing.Any] | str,
     headers: dict[str, str],
-    buffer: typing.Any | None,
+    buffer: NtfyBuffer | None,
 ) -> bool:
     """Helper to handle HTTP 429 buffering logic."""
     if buffer is None:
@@ -175,7 +167,7 @@ def push(  # noqa: C901, PLR0912
     at: str | None = None,
     url: str | None = "https://ntfy.sh",
     dry_run: DryRun = DryRun.off,
-    buffer: typing.Any | None = None,
+    buffer: NtfyBuffer | None = None,
     formatter: Formatter | None = None,
 ) -> None:
     """Pushes a notification.

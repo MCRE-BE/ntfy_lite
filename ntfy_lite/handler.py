@@ -29,20 +29,13 @@ import logging
 import os
 import sys
 import typing
-import warnings
 from pathlib import Path
 
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
-try:
-    from .buffer import NtfyBuffer
-
-    _HAS_BUFFER = True
-except ImportError:
-    _HAS_BUFFER = False
-
+from .buffer import NtfyBuffer
 from .config import Priority, level2priority, level2tags
 from .formatter import Formatter
 from .ntfy import DryRun, push
@@ -132,18 +125,9 @@ class NtfyHandler(logging.Handler):
             elif isinstance(db_path, str):
                 db_path = Path(db_path)
 
-            if _HAS_BUFFER:
-                with contextlib.suppress(Exception):
-                    db_path.parent.mkdir(parents=True, exist_ok=True)
-                self._buffer = NtfyBuffer(db_path)
-            else:
-                msg = (
-                    "Buffering requested (db_path provided or default) but 'pysqlite3' or 'sqlite3' is not available. "
-                    "Run 'pip install ntfy_lite[buffer]' to enable this feature. "
-                    "Buffering will be disabled."
-                )
-                warnings.warn(msg, UserWarning, stacklevel=2)
-                logging.info(msg)
+            with contextlib.suppress(Exception):
+                db_path.parent.mkdir(parents=True, exist_ok=True)
+            self._buffer = NtfyBuffer(db_path)
 
         # ... Check logging level's
         for logging_level in level2priority:
