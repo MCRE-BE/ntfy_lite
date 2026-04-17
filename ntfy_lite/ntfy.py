@@ -156,7 +156,93 @@ def _buffer_429(
     return True
 
 
-def push(  # noqa: C901
+def _build_headers(
+    title: str,
+    priority: Priority,
+    tags: str | collections.abc.Iterable[str] | None,
+    click: str | None,
+    email: str | None,
+    icon: str | None,
+    actions: Action | collections.abc.Sequence[Action],
+    at: str | None,
+    payload: _DataPayload,
+) -> dict[str, str]:
+    direct_mapping: dict[str, typing.Any] = {
+        "Title": title,
+        "At": at,
+        "Click": click,
+        "Email": email,
+        "Icon": icon,
+    }
+    headers = {key: value for key, value in direct_mapping.items() if value}
+
+    if payload.message_header is not None:
+        # use RFC 2047 base64 encoding to support newlines and utf-8 securely
+        b64 = base64.b64encode(payload.message_header.encode("utf-8")).decode("ascii")
+        headers["Message"] = f"=?UTF-8?B?{b64}?="
+
+    if payload.filename_header is not None:
+        headers["Filename"] = payload.filename_header
+
+    # adding priority
+    headers["Priority"] = priority.value
+
+    # adding tags
+    if tags:
+        if isinstance(tags, str):
+            tags = (tags,)
+        headers["Tags"] = ",".join([str(t) for t in tags])
+
+    # adding actions
+    if actions:
+        if isinstance(actions, Action):
+            actions = [actions]
+        headers["Actions"] = "; ".join([str(action) for action in actions])
+
+    return headers
+
+
+def _execute_push(
+    topic: str,
+    url: str,
+    payload_data: typing.Any,
+    headers: dict[str, str],
+    dry_run: DryRun,
+    buffer: typing.Any | None,
+) -> None:
+    if dry_run == DryRun.off:
+        response = _session.put(
+            f"{url}/{topic}",
+            data=payload_data,
+            headers=headers,
+            timeout=10,
+        )
+        if not response.ok:
+            # If HTTP 429, don't block the thread; buffer it asynchronously
+            if int(response.status_code) == 429:
+                if _buffer_429(topic, url, payload_data, headers, buffer):
+                    return
+                raise NtfyError(response.status_code, response.reason)
+
+            # Normal error, raise
+            raise NtfyError(response.status_code, response.reason)
+    elif dry_run == DryRun.error:
+        if getattr(
+            requests,
+            "_SIMULATE_429",
+            False,
+        ) and _buffer_429(
+            topic,
+            url,
+            payload_data,
+            headers,
+            buffer,
+        ):
+            return
+        raise NtfyError(-1, "DryRun.error passed as argument")
+
+
+def push(
     topic: str,
     title: str,
     message: typing.Any | None = None,
@@ -233,68 +319,23 @@ def push(  # noqa: C901
         validate_url("attach", attach)
         validate_url("icon", icon)
 
-        # some argument can be directly set in the
-        # headers dict
-        direct_mapping: dict[str, typing.Any] = {
-            "Title": title,
-            "At": at,
-            "Click": click,
-            "Email": email,
-            "Icon": icon,
-        }
-        headers = {key: value for key, value in direct_mapping.items() if value}
+        headers = _build_headers(
+            title=title,
+            priority=priority,
+            tags=tags,
+            click=click,
+            email=email,
+            icon=icon,
+            actions=actions,
+            at=at,
+            payload=payload,
+        )
 
-        if payload.message_header is not None:
-            # use RFC 2047 base64 encoding to support newlines and utf-8 securely
-            b64 = base64.b64encode(payload.message_header.encode("utf-8")).decode("ascii")
-            headers["Message"] = f"=?UTF-8?B?{b64}?="
-
-        if payload.filename_header is not None:
-            headers["Filename"] = payload.filename_header
-
-        # adding priority
-        headers["Priority"] = priority.value
-
-        # adding tags
-        if tags:
-            if isinstance(tags, str):
-                tags = (tags,)
-            headers["Tags"] = ",".join(str(t) for t in tags)
-
-        # adding actions
-        if actions:
-            if isinstance(actions, Action):
-                actions = [actions]
-            headers["Actions"] = "; ".join(str(action) for action in actions)
-
-        # sending
-        if dry_run == DryRun.off:
-            response = _session.put(
-                f"{url}/{topic}",
-                data=payload.data,
-                headers=headers,
-                timeout=10,
-            )
-            if not response.ok:
-                # If HTTP 429, don't block the thread; buffer it asynchronously
-                if int(response.status_code) == 429:
-                    if _buffer_429(topic, url, payload.data, headers, buffer):
-                        return
-                    raise NtfyError(response.status_code, response.reason)
-
-                # Normal error, raise
-                raise NtfyError(response.status_code, response.reason)
-        elif dry_run == DryRun.error:
-            if getattr(
-                requests,
-                "_SIMULATE_429",
-                False,
-            ) and _buffer_429(
-                topic,
-                url,
-                payload.data,
-                headers,
-                buffer,
-            ):
-                return
-            raise NtfyError(-1, "DryRun.error passed as argument")
+        _execute_push(
+            topic=topic,
+            url=str(url),
+            payload_data=payload.data,
+            headers=headers,
+            dry_run=dry_run,
+            buffer=buffer,
+        )
