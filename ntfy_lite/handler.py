@@ -117,7 +117,6 @@ class NtfyHandler(logging.Handler):
         self._level2email: dict[int, str] | dict[typing.Any, typing.Any] = level2email
         self._error_callback: typing.Callable[[Exception], typing.Any] | None = error_callback
         self._dry_run: DryRun = dry_run
-        self._twice_in_a_row: bool = twice_in_a_row
         self._formatter: Formatter | None = formatter
 
         self._buffer: typing.Any | None = None
@@ -156,9 +155,8 @@ class NtfyHandler(logging.Handler):
     def _is_new_record(self, record: logging.LogRecord) -> bool:
         if self._last_messages is None:
             return True
-        try:
-            previous_message = self._last_messages[record.name]
-        except KeyError:
+        previous_message = self._last_messages.get(record.name)
+        if previous_message is None:
             self._last_messages[record.name] = record.msg
             return True
         if record.msg == previous_message:
@@ -171,20 +169,12 @@ class NtfyHandler(logging.Handler):
 
         if self._last_messages and not self._is_new_record(record):
             return
-        try:
-            filepath = self._level2filepath[record.levelno]
-            message = None
-        except KeyError:
-            filepath = None
-            message = self.format(record)
-        try:
-            email = self._level2email[record.levelno]
-        except KeyError:
-            email = None
-        try:
-            tags = self._level2tags[record.levelno]
-        except KeyError:
-            tags = ()
+
+        filepath = self._level2filepath.get(record.levelno)
+        message = None if filepath else self.format(record)
+        email = self._level2email.get(record.levelno)
+        tags = self._level2tags.get(record.levelno, ())
+
         try:
             title = record.name
             if hasattr(record, "extra") and isinstance(record.extra, dict) and "logger_name" in record.extra:
