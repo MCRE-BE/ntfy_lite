@@ -67,7 +67,7 @@ class NtfyBuffer:
         housing the target URL, the topic, the serialized API headers, and the payload string.
         """
         try:
-            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+            self.db_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
             with sqlite3.connect(str(self.db_path)) as conn:
                 conn.execute("""
                     CREATE TABLE IF NOT EXISTS buffer (
