@@ -39,8 +39,6 @@ ignore = [
 
       "BLE001", # blind-except
 
-      "A001",  # Variable `__doc__` is shadowing a Python builtin
-      "PD010", # `.pivot_table` is preferred to `.pivot` or `.unstack`; provides same functionality
 
       "E501", #  Line too long (82 > 79 characters) (E501)
       "E701", #  multiple statements on one line (colon)
@@ -68,10 +66,6 @@ ignore = [
       "TC004",  # runtime-import-in-type-checking-block
 
       # todo : fix later
-      "A001",  # Variable `format` is shadowing a Python builtin
-      "UP006", # [*] Use `list` instead of `List` for type annotation
-      "UP007", # Use `X | Y` for type annotations
-      "UP035", # `typing.List` is deprecated, use `list` instead
 
       "W191",
       "E111",
@@ -99,7 +93,6 @@ ignore = [
       "ISC001",
       "DTZ003",
       "FBT001", "FBT002",
-      "A002", "A003",
       "EM101", "EM102",
 ]
 
