@@ -1,13 +1,5 @@
 """Module defining the push method, which send a message or the content of a file to an NTFY channel."""
 
-####################
-# IMPORT STATEMENT #
-####################
-"""Module defining the push method, which send a message or the content of a file to an NTFY channel."""
-
-####################
-# IMPORT STATEMENT #
-####################
 import base64
 import collections.abc
 import contextlib
