@@ -1,12 +1,8 @@
 """Module defining the push method, which send a message or the content of a file to an NTFY channel."""
 
+# %%
 ####################
-# IMPORT STATEMENT #
-####################
-"""Module defining the push method, which send a message or the content of a file to an NTFY channel."""
-
-####################
-# IMPORT STATEMENT #
+# Import Statement #
 ####################
 import base64
 import collections.abc
@@ -35,7 +31,7 @@ except ImportError:
 from .actions import Action
 from .config import Priority
 from .error import NtfyError
-from .formatter import AttachmentFormatter, Formatter
+from .formatter import Formatter, TruncationFormatter
 from .utils import validate_url
 
 logger = logging.getLogger("ntfy_lite")
@@ -99,7 +95,7 @@ class _DataManager:
                 self._payload.message_header = message
         elif message is not None:
             if formatter is None:
-                formatter = AttachmentFormatter()
+                formatter = TruncationFormatter()
 
             fmt_result = formatter.process(message)
             self._payload.data = fmt_result.get("data", "")
@@ -319,11 +315,9 @@ def push(
     with _DataManager(message, filepath, formatter) as payload:
         # checking that arguments that are expected to be
         # urls are urls
-        urls = {"click": click, "attach": attach, "icon": icon}
-        for attr, value in urls.items():
-            # throw value error if not None
-            # and not a url
-            validate_url(attr, value)
+        validate_url("click", click)
+        validate_url("attach", attach)
+        validate_url("icon", icon)
 
         headers = _build_headers(
             title=title,
