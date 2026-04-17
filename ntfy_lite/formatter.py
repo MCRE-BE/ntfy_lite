@@ -38,7 +38,7 @@ class Formatter(abc.ABC):
         -------
         dict[str, typing.Any]
             A dictionary that can include:
-            - data: typing.Union[typing.IO, str] (The HTTP body)
+            - data: typing.IO | str (The HTTP body)
             - message_header: str | None (The Message HTTP header)
             - filename_header: str | None (The Filename HTTP header)
             - file_to_close: typing.IO | None (File handle to close after send)
