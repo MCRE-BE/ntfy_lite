@@ -364,10 +364,10 @@ def test_handler_disable_db_path_env(monkeypatch: pytest.MonkeyPatch):
     assert handler._buffer is None
 
 
-def test_long_message_truncation_and_attachment(
+def test_long_message_truncation_no_attachment(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    """Test that a long message is truncated and the full message is sent as an attachment."""
+    """Test that a long message is truncated and no attachment is sent."""
 
     class MockResponse:
         ok = True
@@ -401,17 +401,8 @@ def test_long_message_truncation_and_attachment(
     headers = kwargs["headers"]
     data = kwargs["data"]
 
-    assert "Message" in headers
-    import base64
-
-    encoded_val = headers["Message"]
-    assert encoded_val.startswith("=?UTF-8?B?")
-    assert encoded_val.endswith("?=")
-    b64_part = encoded_val[10:-2]
-    decoded_msg = base64.b64decode(b64_part).decode("utf-8")
-
-    assert "[truncated]" in decoded_msg
-    assert len(decoded_msg) < 4500
-
-    assert headers["Filename"] == "traceback.txt"
-    assert data == long_msg
+    # Since we are using TruncationFormatter by default, the truncated text
+    # is placed in the HTTP body (data) instead of the Message header.
+    assert "Message" not in headers
+    assert "[truncated]" in data
+    assert len(data) < 4500
