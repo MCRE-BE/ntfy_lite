@@ -35,7 +35,7 @@ except ImportError:
 from .actions import Action
 from .config import Priority
 from .error import NtfyError
-from .formatter import AttachmentFormatter, Formatter
+from .formatter import Formatter, TruncationFormatter
 from .utils import validate_url
 
 logger = logging.getLogger("ntfy_lite")
@@ -99,7 +99,7 @@ class _DataManager:
                 self._payload.message_header = message
         elif message is not None:
             if formatter is None:
-                formatter = AttachmentFormatter()
+                formatter = TruncationFormatter()
 
             fmt_result = formatter.process(message)
             self._payload.data = fmt_result.get("data", "")
@@ -160,7 +160,7 @@ def _buffer_429(
     return True
 
 
-def push(  # noqa: C901, PLR0912
+def push(  # noqa: C901
     topic: str,
     title: str,
     message: typing.Any | None = None,
@@ -233,11 +233,9 @@ def push(  # noqa: C901, PLR0912
     with _DataManager(message, filepath, formatter) as payload:
         # checking that arguments that are expected to be
         # urls are urls
-        urls = {"click": click, "attach": attach, "icon": icon}
-        for attr, value in urls.items():
-            # throw value error if not None
-            # and not a url
-            validate_url(attr, value)
+        validate_url("click", click)
+        validate_url("attach", attach)
+        validate_url("icon", icon)
 
         # some argument can be directly set in the
         # headers dict
