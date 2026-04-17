@@ -265,13 +265,13 @@ def push(  # noqa: C901, PLR0912
         if tags:
             if isinstance(tags, str):
                 tags = (tags,)
-            headers["Tags"] = ",".join([str(t) for t in tags])
+            headers["Tags"] = ",".join(str(t) for t in tags)
 
         # adding actions
         if actions:
             if isinstance(actions, Action):
                 actions = [actions]
-            headers["Actions"] = "; ".join([str(action) for action in actions])
+            headers["Actions"] = "; ".join(str(action) for action in actions)
 
         # sending
         if dry_run == DryRun.off:
