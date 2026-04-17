@@ -133,7 +133,7 @@ class NtfyHandler(logging.Handler):
 
             if _HAS_BUFFER:
                 with contextlib.suppress(Exception):
-                    db_path.parent.mkdir(parents=True, exist_ok=True)
+                    db_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
                 self._buffer = NtfyBuffer(db_path)
             else:
                 msg = (
