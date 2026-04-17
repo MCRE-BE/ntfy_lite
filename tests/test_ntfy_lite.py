@@ -406,3 +406,18 @@ def test_long_message_truncation_no_attachment(
     assert "Message" not in headers
     assert "[truncated]" in data
     assert len(data) < 4500
+
+
+def test_data_manager_missing_args():
+    from ntfy_lite.ntfy import _DataManager
+
+    with pytest.raises(ValueError, match="must push either a message or a filepath"):
+        _DataManager(message=None, filepath=None)
+
+
+def test_data_manager_invalid_filepath(tmp_path: Path):
+    from ntfy_lite.ntfy import _DataManager
+
+    non_existent_file = tmp_path / "does_not_exist.txt"
+    with pytest.raises(FileNotFoundError, match="failed to find file to attach"):
+        _DataManager(message=None, filepath=non_existent_file)
