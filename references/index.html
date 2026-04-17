@@ -3374,7 +3374,7 @@ We bypass this by intentionally truncating the text and generating our own attac
 </span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38"></a><span class="sd">        -------</span>
 </span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39"></a><span class="sd">        dict[str, typing.Any]</span>
 </span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40"></a><span class="sd">            A dictionary that can include:</span>
-</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41"></a><span class="sd">            - data: typing.Union[typing.IO, str] (The HTTP body)</span>
+</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41"></a><span class="sd">            - data: typing.IO | str (The HTTP body)</span>
 </span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42"></a><span class="sd">            - message_header: str | None (The Message HTTP header)</span>
 </span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43"></a><span class="sd">            - filename_header: str | None (The Filename HTTP header)</span>
 </span><span id="__span-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44"></a><span class="sd">            - file_to_close: typing.IO | None (File handle to close after send)</span>
@@ -3418,7 +3418,7 @@ We bypass this by intentionally truncating the text and generating our own attac
 <h5 id="ntfy_lite.Formatter.process--returns">Returns</h5>
 <p>dict[str, typing.Any]
     A dictionary that can include:
-    - data: typing.Union[typing.IO, str] (The HTTP body)
+    - data: typing.IO | str (The HTTP body)
     - message_header: str | None (The Message HTTP header)
     - filename_header: str | None (The Filename HTTP header)
     - file_to_close: typing.IO | None (File handle to close after send)
@@ -3464,7 +3464,7 @@ We bypass this by intentionally truncating the text and generating our own attac
 </span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38"></a><span class="sd">    -------</span>
 </span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39"></a><span class="sd">    dict[str, typing.Any]</span>
 </span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40"></a><span class="sd">        A dictionary that can include:</span>
-</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41"></a><span class="sd">        - data: typing.Union[typing.IO, str] (The HTTP body)</span>
+</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41"></a><span class="sd">        - data: typing.IO | str (The HTTP body)</span>
 </span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42"></a><span class="sd">        - message_header: str | None (The Message HTTP header)</span>
 </span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43"></a><span class="sd">        - filename_header: str | None (The Filename HTTP header)</span>
 </span><span id="__span-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44"></a><span class="sd">        - file_to_close: typing.IO | None (File handle to close after send)</span>
@@ -7086,7 +7086,7 @@ We bypass this by intentionally truncating the text and generating our own attac
 </span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38"></a><span class="sd">        -------</span>
 </span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39"></a><span class="sd">        dict[str, typing.Any]</span>
 </span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40"></a><span class="sd">            A dictionary that can include:</span>
-</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41"></a><span class="sd">            - data: typing.Union[typing.IO, str] (The HTTP body)</span>
+</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41"></a><span class="sd">            - data: typing.IO | str (The HTTP body)</span>
 </span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42"></a><span class="sd">            - message_header: str | None (The Message HTTP header)</span>
 </span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43"></a><span class="sd">            - filename_header: str | None (The Filename HTTP header)</span>
 </span><span id="__span-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44"></a><span class="sd">            - file_to_close: typing.IO | None (File handle to close after send)</span>
@@ -7130,7 +7130,7 @@ We bypass this by intentionally truncating the text and generating our own attac
 <h6 id="ntfy_lite.formatter.Formatter.process--returns">Returns</h6>
 <p>dict[str, typing.Any]
     A dictionary that can include:
-    - data: typing.Union[typing.IO, str] (The HTTP body)
+    - data: typing.IO | str (The HTTP body)
     - message_header: str | None (The Message HTTP header)
     - filename_header: str | None (The Filename HTTP header)
     - file_to_close: typing.IO | None (File handle to close after send)
@@ -7176,7 +7176,7 @@ We bypass this by intentionally truncating the text and generating our own attac
 </span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38"></a><span class="sd">    -------</span>
 </span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39"></a><span class="sd">    dict[str, typing.Any]</span>
 </span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40"></a><span class="sd">        A dictionary that can include:</span>
-</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41"></a><span class="sd">        - data: typing.Union[typing.IO, str] (The HTTP body)</span>
+</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41"></a><span class="sd">        - data: typing.IO | str (The HTTP body)</span>
 </span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42"></a><span class="sd">        - message_header: str | None (The Message HTTP header)</span>
 </span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43"></a><span class="sd">        - filename_header: str | None (The Filename HTTP header)</span>
 </span><span id="__span-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44"></a><span class="sd">        - file_to_close: typing.IO | None (File handle to close after send)</span>
