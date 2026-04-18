@@ -7,7 +7,6 @@ __all__ = [
     "HttpMethod",
     "level2tags",
     "NtfyHandler",
-    "DryRun",
     "push",
     "LoggingLevel",
     "Priority",
@@ -21,4 +20,4 @@ from .actions import Action, HttpAction, HttpMethod, ViewAction
 from .config import LoggingLevel, Priority, level2priority, level2tags
 from .formatter import AttachmentFormatter, Formatter, TruncationFormatter
 from .handler import NtfyHandler
-from .ntfy import DryRun, push
+from .ntfy import push
