@@ -18,10 +18,11 @@ def test_truncation_formatter_long_message():
     message = "A" * 4500
     result = formatter.process(message)
 
-    assert len(result["data"]) < 4000
+    assert len(result["data"]) <= 4000
     assert "... [truncated] ..." in result["data"]
-    assert result["data"].startswith("A" * 1800)
-    assert result["data"].endswith("A" * 2100)
+    # Truncation message is 24 bytes, start is (4000 - 24) // 2 = 1988, end is 1988
+    assert result["data"].startswith("A" * 1988)
+    assert result["data"].endswith("A" * 1988)
     assert result["message_header"] is None
     assert result["filename_header"] is None
     assert result["file_to_close"] is None
