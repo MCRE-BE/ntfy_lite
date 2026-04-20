@@ -24,7 +24,7 @@
   color: c5def5
 - name: refactoring
   description: Code refactoring
-  color: 0fbca042
+  color: 0fbca0
 - name: chore
   description: Small changes that don't add or remove features
   color: 0052cc
