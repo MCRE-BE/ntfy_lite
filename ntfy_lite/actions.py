@@ -8,6 +8,7 @@
 ####################
 # Import Statement #
 ####################
+import abc
 import sys
 import typing
 
@@ -23,7 +24,7 @@ from .utils import validate_url
 ###########
 # CLASSES #
 ###########
-class Action:
+class Action(abc.ABC):
     """Superclass for action buttons.
 
     See Also
@@ -58,6 +59,10 @@ class Action:
             self.clear = "true"
         else:
             self.clear = "false"
+
+    @abc.abstractmethod
+    def __str__(self: Self) -> str:
+        """Format the action as a string."""
 
     def _str(
         self: Self,
