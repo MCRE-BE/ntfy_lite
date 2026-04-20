@@ -16,19 +16,6 @@ import ntfy_lite as ntfy
 from ntfy_lite.buffer import NtfyBuffer
 
 
-@pytest.fixture(autouse=True)
-def mock_requests_put(monkeypatch):
-    class MockResponse:
-        ok = True
-        status_code = 200
-        reason = "OK"
-
-    def mock_put(*args, **kwargs):
-        return MockResponse()
-
-    monkeypatch.setattr("requests.Session.put", mock_put)
-
-
 ####################
 # INDIVIDUAL TESTS #
 ####################
@@ -37,7 +24,7 @@ def test_minimal_message_push():
     topic = "ntfy_lite_test"
     title = "ntfy lite test mimimal push"
     message = "ntfy lite test mimimal push: message"
-    ntfy.push(topic, title, message=message)
+    ntfy.push(topic, title, message=message, dry_run=ntfy.DryRun.on)
 
 
 def test_minimal_filepath_push():
@@ -51,7 +38,7 @@ def test_minimal_filepath_push():
         with open(filepath, "w") as f:
             f.write("test content")
 
-        ntfy.push(topic, title, filepath=filepath)
+        ntfy.push(topic, title, filepath=filepath, dry_run=ntfy.DryRun.on)
 
 
 def test_tags_push():
@@ -60,7 +47,7 @@ def test_tags_push():
     title = "ntfy lite test mimimal push"
     message = "ntfy lite test mimimal push: message"
     tags = ["heart", "rainbow"]
-    ntfy.push(topic, title, tags=tags, message=message)
+    ntfy.push(topic, title, tags=tags, message=message, dry_run=ntfy.DryRun.on)
 
 
 def test_click_push():
@@ -69,7 +56,7 @@ def test_click_push():
     title = "ntfy lite test mimimal push"
     message = "ntfy lite test mimimal push: message"
     click = "https://is.mpg.de"
-    ntfy.push(topic, title, click=click, message=message)
+    ntfy.push(topic, title, click=click, message=message, dry_run=ntfy.DryRun.on)
 
 
 def test_click_no_url_push():
@@ -79,7 +66,7 @@ def test_click_no_url_push():
     message = "ntfy lite test mimimal push: message"
     click = "this is not an url"
     with pytest.raises(ValueError):
-        ntfy.push(topic, title, click=click, message=message)
+        ntfy.push(topic, title, click=click, message=message, dry_run=ntfy.DryRun.on)
 
 
 def test_email_push():
@@ -87,7 +74,7 @@ def test_email_push():
     title = "ntfy lite test mimimal push"
     message = "ntfy lite test mimimal push: message"
     email = "camembert@fromage.fr"
-    ntfy.push(topic, title, email=email, message=message)
+    ntfy.push(topic, title, email=email, message=message, dry_run=ntfy.DryRun.on)
 
 
 def test_icon_push():
@@ -95,7 +82,7 @@ def test_icon_push():
     title = "ntfy lite test mimimal push"
     message = "ntfy lite test mimimal push: message"
     icon = "https://styles.redditmedia.com/t5_32uhe/styles/communityIcon_xnt6chtnr2j21.png"
-    ntfy.push(topic, title, icon=icon, message=message)
+    ntfy.push(topic, title, icon=icon, message=message, dry_run=ntfy.DryRun.on)
 
 
 def test_icon_not_url_push():
@@ -104,7 +91,7 @@ def test_icon_not_url_push():
     message = "ntfy lite test mimimal push: message"
     icon = "not an url to an icon"
     with pytest.raises(ValueError):
-        ntfy.push(topic, title, icon=icon, message=message)
+        ntfy.push(topic, title, icon=icon, message=message, dry_run=ntfy.DryRun.on)
 
 
 def test_attach_push():
@@ -112,7 +99,7 @@ def test_attach_push():
     title = "ntfy lite test mimimal push"
     message = "ntfy lite test mimimal push: message"
     attach = "https://ntfy.sh/flowers"
-    ntfy.push(topic, title, attach=attach, message=message)
+    ntfy.push(topic, title, attach=attach, message=message, dry_run=ntfy.DryRun.on)
 
 
 def test_attach_not_an_url_push():
@@ -121,7 +108,7 @@ def test_attach_not_an_url_push():
     message = "ntfy lite test mimimal push: message"
     attach = "not an url to an image"
     with pytest.raises(ValueError):
-        ntfy.push(topic, title, attach=attach, message=message)
+        ntfy.push(topic, title, attach=attach, message=message, dry_run=ntfy.DryRun.on)
 
 
 @pytest.mark.parametrize("clear", [True, False])
@@ -131,7 +118,7 @@ def test_action_view_push(clear):
     title = "ntfy lite test mimimal push"
     message = "ntfy lite test mimimal push: message"
     action = ntfy.ViewAction("ntfy_lite view action", "https://is.mpg.de", clear=clear)
-    ntfy.push(topic, title, message=message, actions=action)
+    ntfy.push(topic, title, message=message, actions=action, dry_run=ntfy.DryRun.on)
 
 
 @pytest.mark.parametrize("clear", [True, False])
@@ -141,7 +128,7 @@ def test_actions_view_push(clear):
     message = "ntfy lite test mimimal push: message"
     action1 = ntfy.ViewAction("ntfy_lite view action", "https://is.mpg.de", clear=clear)
     action2 = ntfy.ViewAction("ntfy_lite view action", "https://is.mpg.de", clear=clear)
-    ntfy.push(topic, title, message=message, actions=[action1, action2])
+    ntfy.push(topic, title, message=message, actions=[action1, action2], dry_run=ntfy.DryRun.on)
 
 
 @pytest.mark.parametrize("clear", [True, False])
@@ -163,21 +150,21 @@ def test_action_http_push(clear):
         headers={"Authorization": "Bearer zAzsx1sk.."},
         body='{"action": "close"}',
     )
-    ntfy.push(topic, title, message=message, actions=action)
+    ntfy.push(topic, title, message=message, actions=action, dry_run=ntfy.DryRun.on)
 
 
 def test_extended_ascii_push():
     topic = "ntfy_lite_test"
     title = "ntfy lite test extended ascii push"
     message = "ntfy_extended_ascii_push message: (°_°)"
-    ntfy.push(topic, title, message=message)
+    ntfy.push(topic, title, message=message, dry_run=ntfy.DryRun.on)
 
 
 def test_unicode_push():
     topic = "ntfy_lite_test"
     title = "ntfy lite test unicode push"
     message = "ntfy unicode push message: 🐋💐🪂"
-    ntfy.push(topic, title, message=message)
+    ntfy.push(topic, title, message=message, dry_run=ntfy.DryRun.on)
 
 
 @pytest.mark.parametrize("clear", [True, False])
@@ -194,7 +181,7 @@ def test_actions_view_http_push(clear: bool):
         headers={"Authorization": "Bearer zAzsx1sk.."},
         body='{"action": "close"}',
     )
-    ntfy.push(topic, title, message=message, actions=[action1, action2])
+    ntfy.push(topic, title, message=message, actions=[action1, action2], dry_run=ntfy.DryRun.on)
 
 
 def test_at_push():
@@ -202,7 +189,7 @@ def test_at_push():
     title = "ntfy lite test mimimal push"
     message = "ntfy lite test mimimal push: message"
     at = "1 minute"
-    ntfy.push(topic, title, at=at, message=message)
+    ntfy.push(topic, title, at=at, message=message, dry_run=ntfy.DryRun.on)
 
 
 # required for mypy
@@ -212,13 +199,11 @@ _callback_called: bool = False
 ################
 # COMPLEX TEST #
 ################
-
 @pytest.mark.parametrize("logging_level", [logging.ERROR, logging.INFO])
 @pytest.mark.parametrize("use_callback", [True, False])
 def test_handler(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
-
     logging_level: int,
     use_callback: bool,
 ):
@@ -235,10 +220,6 @@ def test_handler(
     logging.raiseExceptions = False
 
     with tempfile.TemporaryDirectory() as tmp:
-        filepath = Path(tmp) / "test.txt"
-        with open(filepath, "w") as f:
-            f.write("test content")
-
         level2tags: dict[ntfy.LoggingLevel, tuple[str, ...]] = {
             logging.ERROR: ("broken_heart",),
         }
@@ -251,7 +232,6 @@ def test_handler(
             logging.DEBUG: ntfy.Priority.LOW,
             logging.NOTSET: ntfy.Priority.MIN,
         }
-
 
         handler = ntfy.NtfyHandler(
             topic,
@@ -312,6 +292,7 @@ def test_rate_limit_buffering_and_logging(
         topic,
         title,
         message=message,
+        dry_run=ntfy.DryRun.off,
         buffer=buffer,
     )
 
@@ -342,7 +323,7 @@ def test_handler_default_db_path(
     # Ensure environment is clear
     monkeypatch.delenv("NTFY_LITE_DISABLE_BUFFER", raising=False)
 
-    handler = ntfy.NtfyHandler("test_topic")
+    handler = ntfy.NtfyHandler("test_topic", twice_in_a_row=False)
     assert handler._buffer is not None
     assert handler._buffer.db_path == home_dir / ".ntify" / "ntfy_buffer.sqlite"
 
@@ -390,6 +371,7 @@ def test_long_message_truncation_no_attachment(
         topic,
         title,
         message=long_msg,
+        dry_run=ntfy.DryRun.off,
     )
 
     assert len(call_args) == 1

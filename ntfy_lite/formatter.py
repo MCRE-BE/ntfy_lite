@@ -49,17 +49,9 @@ class Formatter(abc.ABC):
 class AttachmentFormatter(Formatter):
     """Formatter of the attachment text.
 
-    If the text exceeds a maximum length, ntfy converts the whole thing to an attachment.
+    If the text exceeds 4000 bytes, ntfy converts the whole thing to an attachment.
     We bypass this by intentionally truncating the text and generating our own attachment.
     """
-
-    def __init__(
-        self: Self,
-        max_length: int = 4000,
-        truncation_message: str = "\n... [truncated] ...\n",
-    ) -> None:
-        self.max_length = max_length
-        self.truncation_message = truncation_message
 
     def process(
         self: Self,
@@ -74,24 +66,13 @@ class AttachmentFormatter(Formatter):
             "data": "",
         }
 
-        if len(msg_bytes) > self.max_length:
+        if len(msg_bytes) > 4000:
             # 1. Truncate the text message to keep the most relevant parts (the start and end).
-            # Reserve 1000 for start (if enough space) or 1/4 of total.
-            start_len = min(1000, max(0, self.max_length // 4))
-            # Reserve space for the truncation message, the rest for the end.
-            trunc_len = len(self.truncation_message.encode("utf-8"))
-            end_len = max(0, self.max_length - start_len - trunc_len)
-
             truncated_str = (
-                (
-                    msg_bytes[:start_len].decode("utf-8", "ignore")
-                    + self.truncation_message
-                    + msg_bytes[-end_len:].decode("utf-8", "ignore")
-                )
-                if start_len + trunc_len < self.max_length
-                else self.truncation_message
+                msg_bytes[:1000].decode("utf-8", "ignore")
+                + "\n... [truncated] ...\n"
+                + msg_bytes[-2900:].decode("utf-8", "ignore")
             )
-
             result["message_header"] = truncated_str
 
             # 2. Write the complete, un-truncated string to a temporary file.
@@ -119,14 +100,6 @@ class TruncationFormatter(Formatter):
     and leaving a 'truncated' note, avoiding ntfy's attachment mechanism entirely.
     """
 
-    def __init__(
-        self: Self,
-        max_length: int = 4000,
-        truncation_message: str = "\n... [truncated] ...\n",
-    ) -> None:
-        self.max_length = max_length
-        self.truncation_message = truncation_message
-
     def process(
         self: Self,
         message: str,
@@ -140,20 +113,13 @@ class TruncationFormatter(Formatter):
             "data": "",
         }
 
-        if len(msg_bytes) > self.max_length:
+        if len(msg_bytes) > 4000:
             # Truncate the text message to keep the most relevant parts (the start and end)
-            # keeping it safely under max_length bytes.
-            start_len = max(0, (self.max_length - len(self.truncation_message.encode("utf-8"))) // 2)
-            end_len = max(0, self.max_length - len(self.truncation_message.encode("utf-8")) - start_len)
-
+            # keeping it safely under 4000 bytes.
             truncated_str = (
-                (
-                    msg_bytes[:start_len].decode("utf-8", "ignore")
-                    + self.truncation_message
-                    + msg_bytes[-end_len:].decode("utf-8", "ignore")
-                )
-                if start_len > 0
-                else self.truncation_message
+                msg_bytes[:1800].decode("utf-8", "ignore")
+                + "\n... [truncated] ...\n"
+                + msg_bytes[-2100:].decode("utf-8", "ignore")
             )
             # Send the safely truncated string directly as the HTTP body
             result["data"] = truncated_str.encode(

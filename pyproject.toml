@@ -52,6 +52,8 @@ optional-dependencies.test = [
 [dependency-groups]
 dev = [
   "ntfy-lite[dev]",
+  "pytest-cov>=7.1.0",
+  "vulture>=2.16",
 ]
 
 ## #####

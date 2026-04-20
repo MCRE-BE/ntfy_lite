@@ -13,6 +13,7 @@ import sys
 import traceback
 import typing
 from dataclasses import dataclass
+from enum import Enum, auto
 from pathlib import Path
 
 import requests
@@ -120,6 +121,24 @@ class _DataManager:
                 os.remove(self._temp_file_path)
 
 
+class DryRun(Enum):
+    """
+    An optional value of DryRun may be passed as an argument to the [ntfy_lite.ntfy.push][] function.
+
+    - If 'off' is passed (default), then the [ntfy_lite.ntfy.push][] function will publish to ntfy.
+
+    - If 'on' is passed, then the [ntfy_lite.ntfy.push][] function will *not* publish to ntfy.
+
+    - If 'error' is passed, then the [ntfy_lite.ntfy.push][] function will raise an [ntfy_lite.error.NtfyError][].
+
+    This is meant for testing.
+    """
+
+    on = auto()
+    off = auto()
+    error = auto()
+
+
 def _buffer_429(
     topic: str,
     url: str | None,
@@ -188,23 +207,39 @@ def _execute_push(
     url: str,
     payload_data: typing.Any,
     headers: dict[str, str],
+    dry_run: DryRun,
     buffer: typing.Any | None,
 ) -> None:
-    response = _session.put(
-        f"{url}/{topic}",
-        data=payload_data,
-        headers=headers,
-        timeout=10,
-    )
-    if not response.ok:
-        # If HTTP 429, don't block the thread; buffer it asynchronously
-        if int(response.status_code) == 429:
-            if _buffer_429(topic, url, payload_data, headers, buffer):
-                return
-            raise NtfyError(response.status_code, response.reason)
+    if dry_run == DryRun.off:
+        response = _session.put(
+            f"{url}/{topic}",
+            data=payload_data,
+            headers=headers,
+            timeout=10,
+        )
+        if not response.ok:
+            # If HTTP 429, don't block the thread; buffer it asynchronously
+            if int(response.status_code) == 429:
+                if _buffer_429(topic, url, payload_data, headers, buffer):
+                    return
+                raise NtfyError(response.status_code, response.reason)
 
-        # Normal error, raise
-        raise NtfyError(response.status_code, response.reason)
+            # Normal error, raise
+            raise NtfyError(response.status_code, response.reason)
+    elif dry_run == DryRun.error:
+        if getattr(
+            requests,
+            "_SIMULATE_429",
+            False,
+        ) and _buffer_429(
+            topic,
+            url,
+            payload_data,
+            headers,
+            buffer,
+        ):
+            return
+        raise NtfyError(-1, "DryRun.error passed as argument")
 
 
 def push(
@@ -221,6 +256,7 @@ def push(
     actions: Action | collections.abc.Sequence[Action] = (),
     at: str | None = None,
     url: str | None = "https://ntfy.sh",
+    dry_run: DryRun = DryRun.off,
     buffer: typing.Any | None = None,
     formatter: Formatter | None = None,
 ) -> None:
@@ -266,6 +302,8 @@ def push(
         to be used for delayed notification, see [scheduled delivery](https://ntfy.sh/docs/publish/#scheduled-delivery)
     url : str | None, optional
         ntfy server
+    dry_run : DryRun, optional
+        for testing purposes, see [ntfy_lite.ntfy.DryRun][]
     buffer : Any | None, optional
         Buffer object for retrying messages on HTTP 429
     formatter : Formatter | None, optional
@@ -298,5 +336,6 @@ def push(
             url=str(url),
             payload_data=payload.data,
             headers=headers,
+            dry_run=dry_run,
             buffer=buffer,
         )
