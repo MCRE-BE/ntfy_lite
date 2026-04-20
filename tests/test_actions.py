@@ -23,17 +23,25 @@ def mock_validators() -> typing.Any:
         yield mock
 
 
+class MockAction(Action):
+    """Mock Action for testing base class functionality."""
+
+    def __str__(self: typing.Any) -> str:
+        """Format the action as a string."""
+        return self._str(("label", "url"))
+
+
 def test_action_init(mock_validators: typing.Any) -> None:
     """Test Action base class initialization."""
     # Test with clear=False (default)
-    action = Action("test_action", "Test Label", "https://example.com")
+    action = MockAction("test_action", "Test Label", "https://example.com")
     assert action.action == "test_action"
     assert action.label == "Test Label"
     assert action.url == "https://example.com"
     assert action.clear == "false"
 
     # Test with clear=True
-    action_clear = Action("test_action", "Test Label", "https://example.com", clear=True)
+    action_clear = MockAction("test_action", "Test Label", "https://example.com", clear=True)
     assert action_clear.clear == "true"
 
     # Test URL validation call
@@ -42,7 +50,7 @@ def test_action_init(mock_validators: typing.Any) -> None:
 
 def test_action_str_helper() -> None:
     """Test Action._str helper method."""
-    action = Action("test_action", "Test Label", "https://example.com", clear=False)
+    action = MockAction("test_action", "Test Label", "https://example.com", clear=False)
     attrs = ("label", "url", "clear")
     result = action._str(attrs)
     assert result == "test_action, label=Test Label, url=https://example.com, clear=false"
