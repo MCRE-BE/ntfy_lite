@@ -22,6 +22,14 @@ else:
 class Formatter(abc.ABC):
     """Base class for handling how messages are formatted and processed for ntfy."""
 
+    def __init__(
+        self: Self,
+        max_length: int = 4000,
+        truncation_message: str = "\n... [truncated] ...\n",
+    ) -> None:
+        self.max_length = max_length
+        self.truncation_message = truncation_message
+
     @abc.abstractmethod
     def process(
         self: Self,
@@ -49,7 +57,7 @@ class Formatter(abc.ABC):
 class AttachmentFormatter(Formatter):
     """Formatter of the attachment text.
 
-    If the text exceeds 4000 bytes, ntfy converts the whole thing to an attachment.
+    If the text exceeds a given limit, ntfy converts the whole thing to an attachment.
     We bypass this by intentionally truncating the text and generating our own attachment.
     """
 
@@ -66,13 +74,21 @@ class AttachmentFormatter(Formatter):
             "data": "",
         }
 
-        if len(msg_bytes) > 4000:
-            # 1. Truncate the text message to keep the most relevant parts (the start and end).
-            truncated_str = (
-                msg_bytes[:1000].decode("utf-8", "ignore")
-                + "\n... [truncated] ...\n"
-                + msg_bytes[-2900:].decode("utf-8", "ignore")
-            )
+        if len(msg_bytes) > self.max_length:
+            trunc_msg_bytes = self.truncation_message.encode("utf-8")
+            available_length = self.max_length - len(trunc_msg_bytes)
+
+            if available_length <= 0:
+                truncated_str = self.truncation_message
+            else:
+                head_len = available_length // 4
+                tail_len = available_length - head_len
+                # 1. Truncate the text message to keep the most relevant parts (the start and end).
+                truncated_str = (
+                    msg_bytes[:head_len].decode("utf-8", "ignore")
+                    + self.truncation_message
+                    + msg_bytes[-tail_len:].decode("utf-8", "ignore")
+                )
             result["message_header"] = truncated_str
 
             # 2. Write the complete, un-truncated string to a temporary file.
@@ -113,14 +129,26 @@ class TruncationFormatter(Formatter):
             "data": "",
         }
 
-        if len(msg_bytes) > 4000:
-            # Truncate the text message to keep the most relevant parts (the start and end)
-            # keeping it safely under 4000 bytes.
-            truncated_str = (
-                msg_bytes[:1800].decode("utf-8", "ignore")
-                + "\n... [truncated] ...\n"
-                + msg_bytes[-2100:].decode("utf-8", "ignore")
-            )
+        if len(msg_bytes) > self.max_length:
+            trunc_msg_bytes = self.truncation_message.encode("utf-8")
+            available_length = self.max_length - len(trunc_msg_bytes)
+
+            if available_length <= 0:
+                truncated_str = self.truncation_message
+            else:
+                # Truncate the text message to keep the most relevant parts (the start and end)
+                # keeping it safely under max_length bytes.
+                head_len = available_length // 2
+                # Ensure head_len doesn't go negative if we applied the -50 bias, so adjust bias conditionally
+                bias = 50 if available_length > 100 else 0
+                head_len -= bias
+                tail_len = available_length - head_len
+
+                truncated_str = (
+                    msg_bytes[:head_len].decode("utf-8", "ignore")
+                    + self.truncation_message
+                    + msg_bytes[-tail_len:].decode("utf-8", "ignore")
+                )
             # Send the safely truncated string directly as the HTTP body
             result["data"] = truncated_str.encode(
                 encoding="latin-1",
