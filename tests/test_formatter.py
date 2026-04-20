@@ -3,7 +3,7 @@
 ####################
 # IMPORT STATEMENT #
 ####################
-from ntfy_lite.formatter import AttachmentFormatter, TruncationFormatter
+from ntfy_lite.formatter import AttachmentFormatter, EmptyFormatter, TruncationFormatter
 
 
 ####################
@@ -15,6 +15,30 @@ def test_truncation_formatter_short_message():
     result = formatter.process(message)
 
     assert result["data"] == message
+    assert result["message_header"] is None
+    assert result["filename_header"] is None
+    assert result["file_to_close"] is None
+    assert result["temp_file_path"] is None
+
+
+def test_empty_formatter_short_message():
+    formatter = EmptyFormatter()
+    message = "Short message"
+    result = formatter.process(message)
+
+    assert result["data"] == message
+    assert result["message_header"] is None
+    assert result["filename_header"] is None
+    assert result["file_to_close"] is None
+    assert result["temp_file_path"] is None
+
+
+def test_empty_formatter_long_message():
+    formatter = EmptyFormatter()
+    message = "A" * 4500
+    result = formatter.process(message)
+
+    assert result["data"] == "\n... [truncated] ...\n"
     assert result["message_header"] is None
     assert result["filename_header"] is None
     assert result["file_to_close"] is None
