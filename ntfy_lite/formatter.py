@@ -109,6 +109,40 @@ class AttachmentFormatter(Formatter):
         return result
 
 
+class EmptyFormatter(Formatter):
+    """Empty format handler.
+
+    Drops the message body entirely if it exceeds the limit and only returns
+    the truncation note, safely avoiding ntfy's attachment mechanism.
+    """
+
+    def process(
+        self: Self,
+        message: str,
+    ) -> dict[str, typing.Any]:
+        msg_bytes = message.encode("utf-8")
+        result: dict[str, typing.Any] = {
+            "message_header": None,
+            "filename_header": None,
+            "file_to_close": None,
+            "temp_file_path": None,
+            "data": "",
+        }
+
+        if len(msg_bytes) > self.max_length:
+            result["data"] = self.truncation_message.encode(
+                encoding="latin-1",
+                errors="replace",
+            ).decode(encoding="latin-1")
+        else:
+            result["data"] = message.encode(
+                encoding="latin-1",
+                errors="replace",
+            ).decode(encoding="latin-1")
+
+        return result
+
+
 class TruncationFormatter(Formatter):
     """Character limit handler.
 
