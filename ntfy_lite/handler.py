@@ -45,7 +45,7 @@ except ImportError:
 
 from .config import Priority, level2priority, level2tags
 from .formatter import Formatter
-from .ntfy import DryRun, push
+from .ntfy import push
 
 
 ###########
@@ -69,7 +69,6 @@ class NtfyHandler(logging.Handler):
         level2priority: dict[int, Priority] = level2priority,
         level2filepath: dict[int, Path] | None = None,
         level2email: dict[int, str] | None = None,
-        dry_run: DryRun = DryRun.off,
         db_path: Path | str | bool | None = None,
         formatter: Formatter | None = None,
     ):
@@ -93,8 +92,6 @@ class NtfyHandler(logging.Handler):
             If for the logging level of the record a corresponding filepath is set, the notification will contain no message but a correspondinf file attachment (be aware of the size limits, see https://ntfy.sh/docs/publish/#attach-local-file).
         level2email : dict[int, str] | None, optional
             If an email address is specified for the logging level of the record, the ntfy notification will also request a mail to be sent.
-        dry_run : DryRun, optional
-            For testing. If 'on', no notification will be sent. If 'error', no notification will be sent, instead a NtfyError are raised.
         db_path : Path | str | bool | None, optional
             Database path for the buffer.
         formatter : Formatter | None, optional
@@ -116,7 +113,6 @@ class NtfyHandler(logging.Handler):
         self._level2filepath: dict[int, Path] | dict[typing.Any, typing.Any] = level2filepath
         self._level2email: dict[int, str] | dict[typing.Any, typing.Any] = level2email
         self._error_callback: typing.Callable[[Exception], typing.Any] | None = error_callback
-        self._dry_run: DryRun = dry_run
         self._formatter: Formatter | None = formatter
 
         self._buffer: typing.Any | None = None
@@ -193,7 +189,6 @@ class NtfyHandler(logging.Handler):
                 email=email,
                 filepath=filepath,
                 url=self._url,
-                dry_run=self._dry_run,
                 buffer=self._buffer,
                 formatter=self._formatter,
             )
