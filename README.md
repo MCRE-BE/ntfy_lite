@@ -1,7 +1,6 @@
 ![unit tests](https://github.com/MCRE-BE/ntfy_lite/actions/workflows/ci.yml/badge.svg)
 [![documentation](https://github.com/MCRE-BE/ntfy_lite/actions/workflows/docs.yml/badge.svg)](https://mcre-be.github.io/ntfy_lite/)
 
-
 # NTFY LITE
 
 **ntfy_lite** is a minimalistic python API for sending [ntfy](https://ntfy.sh) notifications.
@@ -19,21 +18,31 @@ Compared to the original `ntfy_lite`, this version introduces:
 - **Modernized Codebase**: Support for Python 3.13+, improved typing using modern PEP standards, and a modernized build system (Hatch).
 - **Code Quality**: Integrated `ruff` for consistent style and linting.
 
-Original project documentation can be found [here](https://mcre-be.github.io/ntfy_lite/), and the original source is available [here](https://github.com/MCRE-BE/ntfy_lite).
+This is a fork of the original project, which can be found [here](https://github.com/MPI-IS/ntfy_lite).
+Current documentation for this fork is available [here](https://mcre-be.github.io/ntfy_lite/).
 
 ## Installation
 
+using `uv` (recommended):
+
+```bash
+uv add git+https://github.com/MCRE-BE/ntfy_lite.git
+```
 
 from source:
 
 ```bash
+git clone https://github.com/MCRE-BE/ntfy_lite.git
 cd ntfy_lite
-pip install .
+uv pip install .
 ```
 
-from pypi:
 ```bash
-pip install ntfy_lite
+pip install git+https://github.com/MCRE-BE/ntfy_lite.git
+```
+
+```bash
+uv pip install git+https://github.com/MCRE-BE/ntfy_lite.git
 ```
 
 ## Usage
@@ -42,11 +51,12 @@ The two following examples cover the full API.
 You may also find the code in the demos folder of the sources.
 
 ### pushing notifications
-https://github.com/MCRE-BE/ntfy_lite/blob/master/examples/demo_push.py
+
+[demo_push.py](https://github.com/MCRE-BE/ntfy_lite/blob/master/examples/demo_push.py)
 
 ### logging handler
 
-https://github.com/MCRE-BE/ntfy_lite/blob/master/examples/demo_logging.py
+[demo_logging.py](https://github.com/MCRE-BE/ntfy_lite/blob/master/examples/demo_logging.py)
 
 ## Limitation
 

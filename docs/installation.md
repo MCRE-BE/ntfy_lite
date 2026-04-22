@@ -6,12 +6,24 @@ hide:
 
 # Installation
 
+using `uv` (recommended):
+
+```bash
+uv add git+https://github.com/MCRE-BE/ntfy_lite.git
+```
+
 from source:
 
 ```bash
-git clone https://github.com/MPI-IS/ntfy_lite.git
+git clone https://github.com/MCRE-BE/ntfy_lite.git
 cd ntfy_lite
-pip install .
+uv pip install .
+```
+
+or
+
+```bash
+uv pip install git+https://github.com/MCRE-BE/ntfy_lite.git
 ```
 
 from pypi:
