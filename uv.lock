@@ -403,7 +403,7 @@ wheels = [
 
 [[package]]
 name = "ntfy-lite"
-version = "2.0.2"
+version = "2.0.3"
 source = { editable = "." }
 dependencies = [
     { name = "requests" },
@@ -435,7 +435,7 @@ test = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "ntfy-lite", extra = ["dev"] },
+    { name = "ntfy-lite", extra = ["buffer", "dev", "docs", "test"] },
 ]
 
 [package.metadata]
@@ -456,7 +456,7 @@ requires-dist = [
 provides-extras = ["buffer", "dev", "docs", "test"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "ntfy-lite", extras = ["dev"] }]
+dev = [{ name = "ntfy-lite", extras = ["buffer", "dev", "docs", "test"] }]
 
 [[package]]
 name = "packaging"
