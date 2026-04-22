@@ -9,11 +9,24 @@ import abc
 import sys
 import tempfile
 import typing
+from dataclasses import dataclass
 
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
+
+
+@dataclass
+class FormatterPayload:
+    """Holds the resulting payload, headers, and files to cleanup for pushing to ntfy."""
+
+    data: typing.IO[typing.Any] | str
+    message_header: str | None = None
+    filename_header: str | None = None
+    file_to_close: typing.IO[typing.Any] | None = None
+    temp_file_path: str | None = None
+
 
 
 ###########
@@ -34,7 +47,7 @@ class Formatter(abc.ABC):
     def process(
         self: Self,
         message: str,
-    ) -> dict[str, typing.Any]:
+    ) -> FormatterPayload:
         """Process the message string and return properties for the DataPayload.
 
         Parameters
@@ -44,13 +57,8 @@ class Formatter(abc.ABC):
 
         Returns
         -------
-        dict[str, typing.Any]
-            A dictionary that can include:
-            - data: typing.IO | str (The HTTP body)
-            - message_header: str | None (The Message HTTP header)
-            - filename_header: str | None (The Filename HTTP header)
-            - file_to_close: typing.IO | None (File handle to close after send)
-            - temp_file_path: str | None (Temporary file to delete after send)
+        FormatterPayload
+            A dataclass containing the formatted payload and associated files.
         """
 
 
@@ -64,15 +72,9 @@ class AttachmentFormatter(Formatter):
     def process(
         self: Self,
         message: str,
-    ) -> dict[str, typing.Any]:
+    ) -> FormatterPayload:
         msg_bytes = message.encode("utf-8")
-        result: dict[str, typing.Any] = {
-            "message_header": None,
-            "filename_header": None,
-            "file_to_close": None,
-            "temp_file_path": None,
-            "data": "",
-        }
+        result = FormatterPayload(data="")
 
         if len(msg_bytes) > self.max_length:
             trunc_msg_bytes = self.truncation_message.encode("utf-8")
@@ -89,7 +91,7 @@ class AttachmentFormatter(Formatter):
                     + self.truncation_message
                     + msg_bytes[-tail_len:].decode("utf-8", "ignore")
                 )
-            result["message_header"] = truncated_str
+            result.message_header = truncated_str
 
             # 2. Write the complete, un-truncated string to a temporary file.
             tf = tempfile.NamedTemporaryFile(delete=False, suffix=".txt", prefix="traceback_")
@@ -98,13 +100,13 @@ class AttachmentFormatter(Formatter):
             tf.seek(0)
 
             # 3. Queue the temporary file to be uploaded in the HTTP body.
-            result["file_to_close"] = tf
-            result["temp_file_path"] = tf.name
-            result["data"] = tf
-            result["filename_header"] = "traceback.txt"
+            result.file_to_close = tf
+            result.temp_file_path = tf.name
+            result.data = tf
+            result.filename_header = "traceback.txt"
         else:
             # The message fits within limits, we can send it directly as the HTTP body.
-            result["data"] = message.encode(encoding="latin-1", errors="replace").decode(encoding="latin-1")
+            result.data = message.encode(encoding="latin-1", errors="replace").decode(encoding="latin-1")
 
         return result
 
@@ -119,23 +121,17 @@ class EmptyFormatter(Formatter):
     def process(
         self: Self,
         message: str,
-    ) -> dict[str, typing.Any]:
+    ) -> FormatterPayload:
         msg_bytes = message.encode("utf-8")
-        result: dict[str, typing.Any] = {
-            "message_header": None,
-            "filename_header": None,
-            "file_to_close": None,
-            "temp_file_path": None,
-            "data": "",
-        }
+        result = FormatterPayload(data="")
 
         if len(msg_bytes) > self.max_length:
-            result["data"] = self.truncation_message.encode(
+            result.data = self.truncation_message.encode(
                 encoding="latin-1",
                 errors="replace",
             ).decode(encoding="latin-1")
         else:
-            result["data"] = message.encode(
+            result.data = message.encode(
                 encoding="latin-1",
                 errors="replace",
             ).decode(encoding="latin-1")
@@ -153,15 +149,9 @@ class TruncationFormatter(Formatter):
     def process(
         self: Self,
         message: str,
-    ) -> dict[str, typing.Any]:
+    ) -> FormatterPayload:
         msg_bytes = message.encode("utf-8")
-        result: dict[str, typing.Any] = {
-            "message_header": None,
-            "filename_header": None,
-            "file_to_close": None,
-            "temp_file_path": None,
-            "data": "",
-        }
+        result = FormatterPayload(data="")
 
         if len(msg_bytes) > self.max_length:
             trunc_msg_bytes = self.truncation_message.encode("utf-8")
@@ -184,13 +174,13 @@ class TruncationFormatter(Formatter):
                     + msg_bytes[-tail_len:].decode("utf-8", "ignore")
                 )
             # Send the safely truncated string directly as the HTTP body
-            result["data"] = truncated_str.encode(
+            result.data = truncated_str.encode(
                 encoding="latin-1",
                 errors="replace",
             ).decode(encoding="latin-1")
         else:
             # The message fits within limits, we can send it directly as the HTTP body.
-            result["data"] = message.encode(
+            result.data = message.encode(
                 encoding="latin-1",
                 errors="replace",
             ).decode(encoding="latin-1")
