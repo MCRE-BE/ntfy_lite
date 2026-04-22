@@ -1,4 +1,4 @@
-# Inspiration : https://github.com/MPI-IS/ntfy_lite
+# Original project: https://github.com/MPI-IS/ntfy_lite
 
 __all__ = [
     "Action",
@@ -15,7 +15,6 @@ __all__ = [
     "AttachmentFormatter",
     "TruncationFormatter",
 ]
-__version__ = "1.0.3"
 from .actions import Action, HttpAction, HttpMethod, ViewAction
 from .config import LoggingLevel, Priority, level2priority, level2tags
 from .formatter import (

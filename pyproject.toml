@@ -48,6 +48,9 @@ optional-dependencies.docs = [
 optional-dependencies.test = [
   "pytest>0",
 ]
+urls.Homepage = "https://github.com/MCRE-BE/ntfy_lite"
+urls.Repository = "https://github.com/MCRE-BE/ntfy_lite"
+urlsDocumentation = "https://mcre-be.github.io/ntfy_lite/"
 
 [dependency-groups]
 dev = [
