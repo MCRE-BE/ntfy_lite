@@ -44,6 +44,7 @@ class NtfyBuffer:
     def __init__(
         self: Self,
         db_path: Path,
+        max_file_size: int = 5 * 1024 * 1024,
     ) -> None:
         """Start the buffer, setting up its SQLite path.
 
@@ -53,8 +54,12 @@ class NtfyBuffer:
             The file path to the SQLite database. Ensure this path is in a
             folder that persists across executions (like your standard logging
             directory) so messages survive unexpected application shutdowns.
+        max_file_size : int, optional
+            The maximum number of bytes to read from file attachments when buffering
+            to prevent memory exhaustion. Defaults to 5MB.
         """
         self.db_path = Path(db_path)
+        self.max_file_size = max_file_size
         self._flusher_lock = threading.Lock()
         self._flusher_state = {"running": False}
         self._init_db()
