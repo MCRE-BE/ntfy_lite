@@ -13,6 +13,7 @@ __all__ = [
     "level2priority",
     "Formatter",
     "AttachmentFormatter",
+    "EmptyFormatter",
     "TruncationFormatter",
 ]
 from .actions import Action, HttpAction, HttpMethod, ViewAction
