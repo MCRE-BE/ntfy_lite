@@ -132,8 +132,19 @@ def _buffer_429(
         return False
 
     logger.warning(f"NTFY rate limit exceeded (HTTP 429) for '{topic}'. Buffering message.")
-    data_str = data if isinstance(data, str) else "Original file attachment was not buffered due to HTTP 429."
-    buffer.add(topic, str(url), data_str, headers)
+    if hasattr(data, "read"):
+        with contextlib.suppress(Exception):
+            data.seek(0)
+        try:
+            # Limit reading to 5MB to prevent memory exhaustion
+            data_to_store = data.read(5 * 1024 * 1024)
+        except Exception:
+            data_to_store = "Original file attachment was not buffered due to HTTP 429 and could not be read."
+        with contextlib.suppress(Exception):
+            data.seek(0)
+    else:
+        data_to_store = data
+    buffer.add(topic, str(url), data_to_store, headers)
     return True
 
 

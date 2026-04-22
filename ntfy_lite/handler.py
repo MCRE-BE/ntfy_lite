@@ -151,11 +151,7 @@ class NtfyHandler(logging.Handler):
     def _is_new_record(self, record: logging.LogRecord) -> bool:
         if self._last_messages is None:
             return True
-        previous_message = self._last_messages.get(record.name)
-        if previous_message is None:
-            self._last_messages[record.name] = record.msg
-            return True
-        if record.msg == previous_message:
+        if self._last_messages.get(record.name) == record.msg:
             return False
         self._last_messages[record.name] = record.msg
         return True

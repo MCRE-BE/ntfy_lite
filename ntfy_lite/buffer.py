@@ -86,7 +86,7 @@ class NtfyBuffer:
         self: Self,
         topic: str,
         url: str,
-        data: str,
+        data: str | bytes,
         headers: dict[str, str],
     ) -> None:
         """Stores the failed NTFY message in a local SQLite file to be retried asynchronously.
