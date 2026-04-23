@@ -138,7 +138,10 @@ def _buffer_429(
         return False
 
     logger.warning(f"NTFY rate limit exceeded (HTTP 429) for '{topic}'. Buffering message.")
-    if hasattr(data, "read"):
+
+    if isinstance(data, str):
+        data_to_store = data
+    elif hasattr(data, "read"):
         with contextlib.suppress(Exception):
             data.seek(0)
         try:
@@ -150,7 +153,7 @@ def _buffer_429(
         with contextlib.suppress(Exception):
             data.seek(0)
     else:
-        data_to_store = data
+        data_to_store = ""
     buffer.add(topic, str(url), data_to_store, headers)
     return True
 
