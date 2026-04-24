@@ -269,9 +269,9 @@ def test_handler(
             twice_in_a_row=twice_in_a_row,
             error_callback=callback,
             level2tags=level2tags,
-            level2filepath=level2filepath,
+
             level2priority=level2priority,
-            level2email=level2email,
+
         )
         handler.emit(record)
 

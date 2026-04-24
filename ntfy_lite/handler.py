@@ -55,8 +55,7 @@ class NtfyHandler(logging.Handler):
     """Subclass of [logging.Handler](https://docs.python.org/3/library/logging.html#handler-objects) that pushes ntfy notifications.
 
     The notification title will be the record name, and the
-    notification message will be either the record message or a
-    file attachment (depending on the level2filepath argument).
+    notification message will be the record message.
     """
 
     def __init__(
@@ -67,8 +66,6 @@ class NtfyHandler(logging.Handler):
         error_callback: typing.Callable[[Exception], typing.Any] | None = None,
         level2tags: dict[int, tuple[str, ...]] = level2tags,
         level2priority: dict[int, Priority] = level2priority,
-        level2filepath: dict[int, Path] | None = None,
-        level2email: dict[int, str] | None = None,
         db_path: Path | str | bool | None = None,
         formatter: Formatter | None = None,
     ):
@@ -88,19 +85,11 @@ class NtfyHandler(logging.Handler):
             mapping between logging level and tags to be associated with the notification
         level2priority : dict[int, Priority], optional
             mapping between the logging level and the notification priority.
-        level2filepath : dict[int, Path] | None, optional
-            If for the logging level of the record a corresponding filepath is set, the notification will contain no message but a correspondinf file attachment (be aware of the size limits, see https://ntfy.sh/docs/publish/#attach-local-file).
-        level2email : dict[int, str] | None, optional
-            If an email address is specified for the logging level of the record, the ntfy notification will also request a mail to be sent.
         db_path : Path | str | bool | None, optional
             Database path for the buffer.
         formatter : Formatter | None, optional
             Formatter for payloads.
         """
-
-        # ... checks ...
-        level2filepath = {} if level2filepath is None else level2filepath
-        level2email = {} if level2email is None else level2email
 
         # ... Init ...
         super().__init__()
@@ -110,8 +99,6 @@ class NtfyHandler(logging.Handler):
         self._last_messages = None if twice_in_a_row else {}
         self._level2tags: dict[int, tuple[str, ...]] = level2tags
         self._level2priority: dict[int, Priority] = level2priority
-        self._level2filepath: dict[int, Path] | dict[typing.Any, typing.Any] = level2filepath
-        self._level2email: dict[int, str] | dict[typing.Any, typing.Any] = level2email
         self._error_callback: typing.Callable[[Exception], typing.Any] | None = error_callback
         self._formatter: Formatter | None = formatter
 
@@ -151,11 +138,7 @@ class NtfyHandler(logging.Handler):
     def _is_new_record(self, record: logging.LogRecord) -> bool:
         if self._last_messages is None:
             return True
-        previous_message = self._last_messages.get(record.name)
-        if previous_message is None:
-            self._last_messages[record.name] = record.msg
-            return True
-        if record.msg == previous_message:
+        if self._last_messages.get(record.name) == record.msg:
             return False
         self._last_messages[record.name] = record.msg
         return True
@@ -163,12 +146,10 @@ class NtfyHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
         """Push the record as an ntfy message."""
 
-        if self._last_messages and not self._is_new_record(record):
+        if self._last_messages is not None and not self._is_new_record(record):
             return
 
-        filepath = self._level2filepath.get(record.levelno)
-        message = None if filepath else self.format(record)
-        email = self._level2email.get(record.levelno)
+        message = self.format(record)
         tags = self._level2tags.get(record.levelno, ())
 
         try:
@@ -186,8 +167,6 @@ class NtfyHandler(logging.Handler):
                 message=message,
                 priority=self._level2priority[record.levelno],
                 tags=tags,
-                email=email,
-                filepath=filepath,
                 url=self._url,
                 buffer=self._buffer,
                 formatter=self._formatter,
