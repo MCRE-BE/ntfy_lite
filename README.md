@@ -22,8 +22,6 @@ Compared to the original `ntfy_lite`, this version introduces:
 Original project documentation can be found [here](https://mpi-is.github.io/ntfy_lite/), and the original source is available [here](https://github.com/MPI-IS/ntfy_lite).
 
 ## Installation
-
-
 from source:
 
 ```bash
