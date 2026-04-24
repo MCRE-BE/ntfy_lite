@@ -2,6 +2,7 @@
 
 from ntfy_lite.error import NtfyError
 
+
 def test_ntfy_error_init():
     """Test NtfyError initialization."""
     error = NtfyError(404, "Not Found")
