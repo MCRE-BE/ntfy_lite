@@ -68,12 +68,10 @@ class Action(abc.ABC):
         self: Self,
         attrs: tuple[str, ...],
     ) -> str:
-        return ", ".join(
-            (
-                self.action,
-                *(f"{attr}={val}" for attr in attrs if (val := getattr(self, attr)) is not None),
-            )
-        )
+        return ", ".join((
+            self.action,
+            *(f"{attr}={val}" for attr in attrs if (val := getattr(self, attr)) is not None),
+        ))
 
 
 class ViewAction(Action):
