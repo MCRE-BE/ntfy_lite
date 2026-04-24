@@ -44,6 +44,7 @@ class NtfyBuffer:
     def __init__(
         self: Self,
         db_path: Path,
+        retry_interval: int = 60,
     ) -> None:
         """Start the buffer, setting up its SQLite path.
 
@@ -53,8 +54,11 @@ class NtfyBuffer:
             The file path to the SQLite database. Ensure this path is in a
             folder that persists across executions (like your standard logging
             directory) so messages survive unexpected application shutdowns.
+        retry_interval : int, optional
+            The number of seconds to wait between retry attempts, by default 60.
         """
         self.db_path = Path(db_path)
+        self.retry_interval = retry_interval
         self._flusher_lock = threading.Lock()
         self._flusher_state = {"running": False}
         self._init_db()
@@ -110,7 +114,7 @@ class NtfyBuffer:
 
         This routine:
         1. Selects all rows currently stranded in the buffer ordered by creation date.
-        2. Sleeps for 60 seconds linearly per loop to respect standard rate-limiting.
+        2. Sleeps for the configured retry_interval linearly per loop to respect standard rate-limiting.
         3. Attempts an HTTP PUT. If it's a 429, it breaks the loop (it will try again
            next pipeline run).
         4. Successes and untrappable HTTP failure codes will delete the row permanently
@@ -123,8 +127,8 @@ class NtfyBuffer:
                 rows = cursor.fetchall()
 
             for row_id, topic, url, headers_json, data in rows:
-                # Sleep 60 seconds between retries to respect the ntfy rate limit interval
-                time.sleep(60)
+                # Sleep between retries to respect the ntfy rate limit interval
+                time.sleep(self.retry_interval)
                 try:
                     headers = json.loads(headers_json)
 
