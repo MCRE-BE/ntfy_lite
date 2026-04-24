@@ -9,6 +9,7 @@ def test_ntfy_error_init():
     assert error.status_code == 404
     assert error.reason == "Not Found"
 
+
 def test_ntfy_error_str():
     """Test NtfyError string representation."""
     error = NtfyError(500, "Internal Server Error")
