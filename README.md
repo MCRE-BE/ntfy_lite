@@ -19,14 +19,6 @@ This is a fork of the original project, which can be found [here](https://github
 Current documentation for this fork is available [here](https://mcre-be.github.io/ntfy_lite/).
 
 ## Installation
-
-
-using `uv` (recommended):
-
-```bash
-uv add git+https://github.com/MCRE-BE/ntfy_lite.git
-```
-
 from source:
 
 ```bash
