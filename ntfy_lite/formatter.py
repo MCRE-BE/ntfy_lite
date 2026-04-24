@@ -30,6 +30,15 @@ class Formatter(abc.ABC):
         self.max_length = max_length
         self.truncation_message = truncation_message
 
+    def _default_payload(self: Self) -> dict[str, typing.Any]:
+        return {
+            "message_header": None,
+            "filename_header": None,
+            "file_to_close": None,
+            "temp_file_path": None,
+            "data": "",
+        }
+
     @abc.abstractmethod
     def process(
         self: Self,
@@ -66,13 +75,7 @@ class AttachmentFormatter(Formatter):
         message: str,
     ) -> dict[str, typing.Any]:
         msg_bytes = message.encode("utf-8")
-        result: dict[str, typing.Any] = {
-            "message_header": None,
-            "filename_header": None,
-            "file_to_close": None,
-            "temp_file_path": None,
-            "data": "",
-        }
+        result = self._default_payload()
 
         if len(msg_bytes) > self.max_length:
             trunc_msg_bytes = self.truncation_message.encode("utf-8")
@@ -121,13 +124,7 @@ class EmptyFormatter(Formatter):
         message: str,
     ) -> dict[str, typing.Any]:
         msg_bytes = message.encode("utf-8")
-        result: dict[str, typing.Any] = {
-            "message_header": None,
-            "filename_header": None,
-            "file_to_close": None,
-            "temp_file_path": None,
-            "data": "",
-        }
+        result = self._default_payload()
 
         if len(msg_bytes) > self.max_length:
             result["data"] = self.truncation_message.encode(
@@ -155,13 +152,7 @@ class TruncationFormatter(Formatter):
         message: str,
     ) -> dict[str, typing.Any]:
         msg_bytes = message.encode("utf-8")
-        result: dict[str, typing.Any] = {
-            "message_header": None,
-            "filename_header": None,
-            "file_to_close": None,
-            "temp_file_path": None,
-            "data": "",
-        }
+        result = self._default_payload()
 
         if len(msg_bytes) > self.max_length:
             trunc_msg_bytes = self.truncation_message.encode("utf-8")
