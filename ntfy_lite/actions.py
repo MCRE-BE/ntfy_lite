@@ -158,4 +158,4 @@ class HttpAction(Action):
         if not self.headers:
             return main
         headers_str = ", ".join(f"headers.{key}={value}" for key, value in self.headers.items())
-        return main + ", " + headers_str
+        return f"{main}, {headers_str}"
