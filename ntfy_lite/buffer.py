@@ -122,6 +122,8 @@ class NtfyBuffer:
                 cursor.execute("SELECT id, topic, url, headers, data FROM buffer ORDER BY created_at ASC")
                 rows = cursor.fetchall()
 
+            to_delete = []
+
             for row_id, topic, url, headers_json, data in rows:
                 # Sleep 60 seconds between retries to respect the ntfy rate limit interval
                 time.sleep(60)
@@ -130,8 +132,7 @@ class NtfyBuffer:
 
                     response = requests.put(f"{url}/{topic}", data=data, headers=headers, timeout=10)
                     if response.ok:
-                        with sqlite3.connect(str(self.db_path), timeout=10) as conn:
-                            conn.execute("DELETE FROM buffer WHERE id = ?", (row_id,))
+                        to_delete.append((row_id,))
                     elif int(response.status_code) == 429:
                         # Still rate limited; stop flushing so we don't spam the server further
                         logging.warning("NTFY buffer fast retry rate limited (HTTP 429). Will stop flusher.")
@@ -141,11 +142,17 @@ class NtfyBuffer:
                         logging.error(
                             f"NTFY async retry failed: {response.reason}. Discarding buffered message id {row_id}."
                         )
-                        with sqlite3.connect(str(self.db_path), timeout=10) as conn:
-                            conn.execute("DELETE FROM buffer WHERE id = ?", (row_id,))
+                        to_delete.append((row_id,))
                 except Exception:
                     logging.exception("NTFY async flusher exception.")
                     break  # Wait for next import to retry
+
+            if to_delete:
+                try:
+                    with sqlite3.connect(str(self.db_path), timeout=10) as conn:
+                        conn.executemany("DELETE FROM buffer WHERE id = ?", to_delete)
+                except Exception:
+                    logging.exception("Failed to batch delete buffered messages.")
         except Exception:
             logging.exception("NTFY async flusher final exception fallback")
         finally:
