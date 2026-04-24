@@ -1,4 +1,3 @@
-# ruff: noqa: SIM115
 """Message formatter in case the message is too large."""
 
 # %%
@@ -6,9 +5,10 @@
 # Import Statement #
 ####################
 import abc
+import io
 import sys
-import tempfile
 import typing
+from dataclasses import dataclass
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -19,6 +19,49 @@ else:
 ###########
 # CLASSES #
 ###########
+@dataclass
+class FormatterPayload:
+    """Holds the resulting payload, headers, and files to cleanup for pushing to ntfy.
+
+    Attributes
+    ----------
+    - data: typing.IO | str (The HTTP body)
+    - message_header: str | None (The Message HTTP header)
+    - filename_header: str | None (The Filename HTTP header)
+    - file_to_close: typing.IO | None (File handle to close after send)
+    - temp_file_path: str | None (Temporary file to delete after send)
+    """
+
+    data: typing.IO[typing.Any] | str
+    message_header: str | None = None
+    filename_header: str | None = None
+    file_to_close: typing.IO[typing.Any] | None = None
+    temp_file_path: str | None = None
+
+    def get(
+        self: Self,
+        key: typing.Any,
+        default: typing.Any = None,
+    ) -> typing.Any:
+        """Retrieve one of the defined fields from the dictionnary."""
+        return getattr(self, key, default)
+
+    def __getitem__(
+        self: Self,
+        key: typing.Any,
+    ) -> typing.Any:
+        """Enable dataclass to be subscriptable."""
+        return getattr(self, key, None)
+
+    def __setitem__(
+        self: Self,
+        key: typing.Any,
+        value: typing.Any = None,
+    ) -> None:
+        """Enable dataclass to be subscriptable."""
+        setattr(self, key, value)
+
+
 class Formatter(abc.ABC):
     """Base class for handling how messages are formatted and processed for ntfy."""
 
@@ -30,20 +73,14 @@ class Formatter(abc.ABC):
         self.max_length = max_length
         self.truncation_message = truncation_message
 
-    def _default_payload(self: Self) -> dict[str, typing.Any]:
-        return {
-            "message_header": None,
-            "filename_header": None,
-            "file_to_close": None,
-            "temp_file_path": None,
-            "data": "",
-        }
+    def _default_payload(self: Self) -> FormatterPayload:
+        return FormatterPayload(data="")
 
     @abc.abstractmethod
     def process(
         self: Self,
         message: str,
-    ) -> dict[str, typing.Any]:
+    ) -> FormatterPayload:
         """Process the message string and return properties for the DataPayload.
 
         Parameters
@@ -53,13 +90,8 @@ class Formatter(abc.ABC):
 
         Returns
         -------
-        dict[str, typing.Any]
-            A dictionary that can include:
-            - data: typing.IO | str (The HTTP body)
-            - message_header: str | None (The Message HTTP header)
-            - filename_header: str | None (The Filename HTTP header)
-            - file_to_close: typing.IO | None (File handle to close after send)
-            - temp_file_path: str | None (Temporary file to delete after send)
+        FormatterPayload
+            A dataclass containing the formatted payload and associated files.
         """
 
 
@@ -73,7 +105,7 @@ class AttachmentFormatter(Formatter):
     def process(
         self: Self,
         message: str,
-    ) -> dict[str, typing.Any]:
+    ) -> FormatterPayload:
         msg_bytes = message.encode("utf-8")
         result = self._default_payload()
 
@@ -94,15 +126,12 @@ class AttachmentFormatter(Formatter):
                 )
             result["message_header"] = truncated_str
 
-            # 2. Write the complete, un-truncated string to a temporary file.
-            tf = tempfile.NamedTemporaryFile(delete=False, suffix=".txt", prefix="traceback_")
-            tf.write(msg_bytes)
-            tf.flush()
-            tf.seek(0)
+            # 2. Provide the complete, un-truncated string in a file-like object.
+            tf = io.BytesIO(msg_bytes)
 
-            # 3. Queue the temporary file to be uploaded in the HTTP body.
+            # 3. Queue the file-like object to be uploaded in the HTTP body.
             result["file_to_close"] = tf
-            result["temp_file_path"] = tf.name
+            result["temp_file_path"] = None
             result["data"] = tf
             result["filename_header"] = "traceback.txt"
         else:
@@ -122,7 +151,7 @@ class EmptyFormatter(Formatter):
     def process(
         self: Self,
         message: str,
-    ) -> dict[str, typing.Any]:
+    ) -> FormatterPayload:
         msg_bytes = message.encode("utf-8")
         result = self._default_payload()
 
@@ -150,7 +179,7 @@ class TruncationFormatter(Formatter):
     def process(
         self: Self,
         message: str,
-    ) -> dict[str, typing.Any]:
+    ) -> FormatterPayload:
         msg_bytes = message.encode("utf-8")
         result = self._default_payload()
 
