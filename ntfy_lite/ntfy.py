@@ -97,11 +97,11 @@ class _DataManager:
                 formatter = TruncationFormatter()
 
             fmt_result = formatter.process(message)
-            self._payload.data = fmt_result.get("data", "")
-            self._payload.message_header = fmt_result.get("message_header")
-            self._payload.filename_header = fmt_result.get("filename_header")
-            self._file_to_close = fmt_result.get("file_to_close")
-            self._temp_file_path = fmt_result.get("temp_file_path")
+            self._payload.data = fmt_result.data
+            self._payload.message_header = fmt_result.message_header
+            self._payload.filename_header = fmt_result.filename_header
+            self._file_to_close = fmt_result.file_to_close
+            self._temp_file_path = fmt_result.temp_file_path
 
     def __enter__(self: Self) -> _DataPayload:
         return self._payload
