@@ -1,4 +1,3 @@
-# ruff: noqa: SIM115
 """Message formatter in case the message is too large."""
 
 # %%
@@ -6,8 +5,8 @@
 # Import Statement #
 ####################
 import abc
+import io
 import sys
-import tempfile
 import typing
 
 if sys.version_info >= (3, 11):
@@ -91,15 +90,12 @@ class AttachmentFormatter(Formatter):
                 )
             result["message_header"] = truncated_str
 
-            # 2. Write the complete, un-truncated string to a temporary file.
-            tf = tempfile.NamedTemporaryFile(delete=False, suffix=".txt", prefix="traceback_")
-            tf.write(msg_bytes)
-            tf.flush()
-            tf.seek(0)
+            # 2. Provide the complete, un-truncated string in a file-like object.
+            tf = io.BytesIO(msg_bytes)
 
-            # 3. Queue the temporary file to be uploaded in the HTTP body.
+            # 3. Queue the file-like object to be uploaded in the HTTP body.
             result["file_to_close"] = tf
-            result["temp_file_path"] = tf.name
+            result["temp_file_path"] = None
             result["data"] = tf
             result["filename_header"] = "traceback.txt"
         else:
