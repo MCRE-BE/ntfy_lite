@@ -133,28 +133,29 @@ class NtfyBuffer:
 
             to_delete = []
 
-            for row_id, topic, url, headers_json, data in rows:
-                # Sleep between retries to respect the ntfy rate limit interval
-                time.sleep(self.retry_interval)
-                try:
-                    headers = json.loads(headers_json)
+            with requests.Session() as session:
+                for row_id, topic, url, headers_json, data in rows:
+                    # Sleep 60 seconds between retries to respect the ntfy rate limit interval
+                    time.sleep(self.retry_interval)
+                    try:
+                        headers = json.loads(headers_json)
 
-                    response = requests.put(f"{url}/{topic}", data=data, headers=headers, timeout=10)
-                    if response.ok:
-                        to_delete.append((row_id,))
-                    elif int(response.status_code) == 429:
-                        # Still rate limited; stop flushing so we don't spam the server further
-                        logging.warning("NTFY buffer fast retry rate limited (HTTP 429). Will stop flusher.")
-                        break
-                    else:
-                        # Some other failure, discard the buffered message and log the trace
-                        logging.error(
-                            f"NTFY async retry failed: {response.reason}. Discarding buffered message id {row_id}."
-                        )
-                        to_delete.append((row_id,))
-                except Exception:
-                    logging.exception("NTFY async flusher exception.")
-                    break  # Wait for next import to retry
+                        response = session.put(f"{url}/{topic}", data=data, headers=headers, timeout=10)
+                        if response.ok:
+                            to_delete.append((row_id,))
+                        elif int(response.status_code) == 429:
+                            # Still rate limited; stop flushing so we don't spam the server further
+                            logging.warning("NTFY buffer fast retry rate limited (HTTP 429). Will stop flusher.")
+                            break
+                        else:
+                            # Some other failure, discard the buffered message and log the trace
+                            logging.error(
+                                f"NTFY async retry failed: {response.reason}. Discarding buffered message id {row_id}."
+                            )
+                            to_delete.append((row_id,))
+                    except Exception:
+                        logging.exception("NTFY async flusher exception.")
+                        break  # Wait for next import to retry
 
             if to_delete:
                 try:
