@@ -8,7 +8,20 @@ from ntfy_lite import Priority, push
 
 
 def main() -> None:
-    """Main CLI entry point."""
+    """
+    Main entry point for the `ntfy-lite` command-line interface.
+
+    This function parses command-line arguments corresponding to the
+    parameters of the `ntfy_lite.push` function. It executes the
+    notification push and outputs a success or error message to standard
+    streams.
+
+    Raises
+    ------
+    SystemExit
+        If the push notification fails due to network, validation, or other errors,
+        the script will exit with status code 1.
+    """
     parser = argparse.ArgumentParser(
         description="Push a notification using ntfy_lite.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

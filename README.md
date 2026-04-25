@@ -40,6 +40,14 @@ uv pip install git+https://github.com/MCRE-BE/ntfy_lite.git
 The two following examples cover the full API.
 You may also find the code in the demos folder of the sources.
 
+### CLI
+The package includes a command-line utility for pushing notifications directly from your shell:
+
+```bash
+ntfy-lite "my_topic" "Hello!" -m "This is a CLI test" -p high -t warning,skull
+```
+Run `ntfy-lite --help` for a full list of available options.
+
 ### pushing notifications
 [ntfy_push.py](https://github.com/MCRE-BE/ntfy_lite/blob/master/demos/ntfy_push.py)
 
