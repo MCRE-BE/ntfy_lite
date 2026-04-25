@@ -7,7 +7,7 @@ requires = [ "hatchling" ]
 ## #########
 [project]
 name = "ntfy-lite"
-version = "2.0.2"
+version = "2.0.3"
 description = "minimalistic python API for sending ntfy notifications"
 readme = "README.md"
 license-files = [ "LICENSE" ]
@@ -48,10 +48,13 @@ optional-dependencies.docs = [
 optional-dependencies.test = [
   "pytest>0",
 ]
+urls.Homepage = "https://github.com/MCRE-BE/ntfy_lite"
+urls.Repository = "https://github.com/MCRE-BE/ntfy_lite"
+urlsDocumentation = "https://mcre-be.github.io/ntfy_lite/"
 
 [dependency-groups]
 dev = [
-  "ntfy-lite[dev]",
+  "ntfy-lite[buffer,dev,docs,test]",
 ]
 
 ## #####
@@ -60,7 +63,17 @@ dev = [
 [tool.hatch]
 build.targets.wheel.packages = [ "ntfy_lite" ]
 
-[tool.pyright]
-venv = ".venv"
-strict = [ "**/*.py" ]
-pythonVersion = "3.10"
+[tool.ty]
+environment.root = [ "." ]
+environment.python = "./.venv"
+# Globally downgrade noisy rules to warnings to focus on hard errors
+rules.invalid-argument-type = "warn"
+rules.possibly-unresolved-reference = "warn"
+rules.unresolved-import = "error"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "v${version}"
+version_scheme = "pep440"
+version_provider = "uv"
+update_changelog_on_bump = true

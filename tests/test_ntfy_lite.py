@@ -279,6 +279,32 @@ def test_handler(
         assert not _callback_called[0]
 
 
+def test_error_push(monkeypatch: pytest.MonkeyPatch):
+    """Test that a non-429 error from the server raises a NtfyError."""
+
+    class MockResponse:
+        ok = False
+        status_code = 500
+        reason = "Internal Server Error"
+
+    def mock_put(*args: typing.Any, **kwargs: typing.Any) -> MockResponse:
+        return MockResponse()
+
+    monkeypatch.setattr("requests.Session.put", mock_put)
+
+    topic = "ntfy_test_error"
+    title = "Test error"
+    message = "Test error message"
+
+    from ntfy_lite.error import NtfyError
+
+    with pytest.raises(NtfyError) as exc_info:
+        ntfy.push(topic, title, message=message)
+
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.reason == "Internal Server Error"
+
+
 def test_rate_limit_buffering_and_logging(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
