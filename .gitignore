@@ -111,4 +111,4 @@ dmypy.json
 
 # Ignore Any AI helpers
 GEMINI.md
-sync_to_monorepo.md
+.gemini/
