@@ -19,5 +19,7 @@ def validate_url(attribute: str, value: str | None) -> None:
     if value is None:
         return
     parsed = urllib.parse.urlparse(value)
-    if not parsed.scheme or not parsed.netloc or parsed.scheme not in ("http", "https"):
+    if not parsed.scheme or not parsed.netloc:
         raise ValueError(f"the value for {attribute} ({value}) is not an url")
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(f"the value for {attribute} ({value}) has an invalid scheme: {parsed.scheme}")
