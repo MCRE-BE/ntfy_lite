@@ -45,6 +45,7 @@ class NtfyBuffer:
         self: Self,
         db_path: Path,
         max_file_size: int = 5 * 1024 * 1024,
+        retry_interval: int = 60,
     ) -> None:
         """Start the buffer, setting up its SQLite path.
 
@@ -57,9 +58,12 @@ class NtfyBuffer:
         max_file_size : int, optional
             The maximum number of bytes to read from file attachments when buffering
             to prevent memory exhaustion. Defaults to 5MB.
+        retry_interval : int, optional
+            The number of seconds to wait between retry attempts, by default 60.
         """
         self.db_path = Path(db_path)
         self.max_file_size = max_file_size
+        self.retry_interval = retry_interval
         self._flusher_lock = threading.Lock()
         self._flusher_state = {"running": False}
         self._init_db()
@@ -115,7 +119,7 @@ class NtfyBuffer:
 
         This routine:
         1. Selects all rows currently stranded in the buffer ordered by creation date.
-        2. Sleeps for 60 seconds linearly per loop to respect standard rate-limiting.
+        2. Sleeps for the configured retry_interval linearly per loop to respect standard rate-limiting.
         3. Attempts an HTTP PUT. If it's a 429, it breaks the loop (it will try again
            next pipeline run).
         4. Successes and untrappable HTTP failure codes will delete the row permanently
@@ -129,28 +133,29 @@ class NtfyBuffer:
 
             to_delete = []
 
-            for row_id, topic, url, headers_json, data in rows:
-                # Sleep 60 seconds between retries to respect the ntfy rate limit interval
-                time.sleep(60)
-                try:
-                    headers = json.loads(headers_json)
+            with requests.Session() as session:
+                for row_id, topic, url, headers_json, data in rows:
+                    # Sleep 60 seconds between retries to respect the ntfy rate limit interval
+                    time.sleep(self.retry_interval)
+                    try:
+                        headers = json.loads(headers_json)
 
-                    response = requests.put(f"{url}/{topic}", data=data, headers=headers, timeout=10)
-                    if response.ok:
-                        to_delete.append((row_id,))
-                    elif int(response.status_code) == 429:
-                        # Still rate limited; stop flushing so we don't spam the server further
-                        logging.warning("NTFY buffer fast retry rate limited (HTTP 429). Will stop flusher.")
-                        break
-                    else:
-                        # Some other failure, discard the buffered message and log the trace
-                        logging.error(
-                            f"NTFY async retry failed: {response.reason}. Discarding buffered message id {row_id}."
-                        )
-                        to_delete.append((row_id,))
-                except Exception:
-                    logging.exception("NTFY async flusher exception.")
-                    break  # Wait for next import to retry
+                        response = session.put(f"{url}/{topic}", data=data, headers=headers, timeout=10)
+                        if response.ok:
+                            to_delete.append((row_id,))
+                        elif int(response.status_code) == 429:
+                            # Still rate limited; stop flushing so we don't spam the server further
+                            logging.warning("NTFY buffer fast retry rate limited (HTTP 429). Will stop flusher.")
+                            break
+                        else:
+                            # Some other failure, discard the buffered message and log the trace
+                            logging.error(
+                                f"NTFY async retry failed: {response.reason}. Discarding buffered message id {row_id}."
+                            )
+                            to_delete.append((row_id,))
+                    except Exception:
+                        logging.exception("NTFY async flusher exception.")
+                        break  # Wait for next import to retry
 
             if to_delete:
                 try:
