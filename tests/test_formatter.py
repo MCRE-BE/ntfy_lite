@@ -3,7 +3,7 @@
 ####################
 # IMPORT STATEMENT #
 ####################
-from ntfy_lite.formatter import AttachmentFormatter, EmptyFormatter, TruncationFormatter
+from ntfy_lite.formatter import AttachmentFormatter, EmptyFormatter, TemplateFormatter, TruncationFormatter
 
 
 ####################
@@ -109,6 +109,29 @@ def test_attachment_formatter_custom_length():
     assert trunc_msg in result["message_header"]
     assert result["file_to_close"] is not None
     assert result["filename_header"] == "traceback.txt"
+
+
+def test_template_formatter_short_message():
+    formatter = TemplateFormatter()
+    message = "Short message"
+    result = formatter.process(message)
+
+    assert result["data"] == message
+    assert result["message_header"] is None
+    assert result["filename_header"] is None
+    assert result["file_to_close"] is None
+    assert result["temp_file_path"] is None
+
+
+def test_template_formatter_long_message():
+    formatter = TemplateFormatter(template="[START] {head}\n{truncation_message}\n{tail} [END]")
+    message = "A" * 4500
+    result = formatter.process(message)
+
+    assert len(result["data"]) <= 4000
+    assert "\n\n... [truncated] ...\n\n" in result["data"]
+    assert result["data"].startswith("[START] A")
+    assert result["data"].endswith("A [END]")
 
 
 def test_truncation_formatter_long_unicode_message():

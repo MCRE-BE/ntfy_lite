@@ -256,22 +256,12 @@ def test_handler(
             logging.NOTSET: ntfy.Priority.MIN,
         }
 
-        level2filepath: dict[ntfy.LoggingLevel, Path] = {
-            logging.ERROR: filepath,
-        }
-
-        level2email: dict[ntfy.LoggingLevel, str] = {
-            logging.ERROR: "mimolette@fromage.fr",
-        }
-
         handler = ntfy.NtfyHandler(
             topic,
             twice_in_a_row=twice_in_a_row,
             error_callback=callback,
             level2tags=level2tags,
-            level2filepath=level2filepath,
             level2priority=level2priority,
-            level2email=level2email,
         )
         handler.emit(record)
 

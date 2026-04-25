@@ -95,6 +95,82 @@ class Formatter(abc.ABC):
         """
 
 
+class TemplateFormatter(Formatter):
+    """Template-based format handler.
+
+    Handles character limits by intelligently cutting the middle of the text out
+    and substituting the result into a user-defined template string.
+    """
+
+    def __init__(
+        self: Self,
+        max_length: int = 4000,
+        truncation_message: str = "\n... [truncated] ...\n",
+        template: str = "{head}{truncation_message}{tail}",
+    ) -> None:
+        r"""Initialize TemplateFormatter.
+
+        Parameters
+        ----------
+        max_length : int, optional
+            The maximum allowed length of the message body, by default 4000.
+        truncation_message : str, optional
+            The note added to indicate truncation, by default "\n... [truncated] ...\n".
+        template : str, optional
+            The format string determining how the final message is constructed.
+            Must contain `{head}`, `{truncation_message}`, and `{tail}` placeholders,
+            by default "{head}{truncation_message}{tail}".
+        """
+        super().__init__(max_length, truncation_message)
+        self.template = template
+
+    def process(
+        self: Self,
+        message: str,
+    ) -> FormatterPayload:
+        msg_bytes = message.encode("utf-8")
+        result = self._default_payload()
+
+        if len(msg_bytes) > self.max_length:
+            # Estimate how much space the template adds (excluding the placeholders)
+            template_static_len = len(
+                self.template.format(head="", truncation_message=self.truncation_message, tail="")
+            )
+
+            available_length = self.max_length - template_static_len
+
+            if available_length <= 0:
+                truncated_str = self.template.format(head="", truncation_message=self.truncation_message, tail="")
+            else:
+                head_len = available_length // 2
+                bias = 50 if available_length > 100 else 0
+                head_len -= bias
+                tail_len = available_length - head_len
+
+                head = msg_bytes[:head_len].decode("utf-8", "ignore")
+                tail = msg_bytes[-tail_len:].decode("utf-8", "ignore")
+
+                truncated_str = self.template.format(
+                    head=head,
+                    truncation_message=self.truncation_message,
+                    tail=tail,
+                )
+
+            # In case the resulting string with replaced characters exceeds max_length slightly,
+            # we ensure it gets sent directly as an HTTP body by relying on the latin-1 encoding
+            result["data"] = truncated_str.encode(
+                encoding="latin-1",
+                errors="replace",
+            ).decode(encoding="latin-1")
+        else:
+            result["data"] = message.encode(
+                encoding="latin-1",
+                errors="replace",
+            ).decode(encoding="latin-1")
+
+        return result
+
+
 class AttachmentFormatter(Formatter):
     """Formatter of the attachment text.
 
@@ -120,9 +196,9 @@ class AttachmentFormatter(Formatter):
                 tail_len = available_length - head_len
                 # 1. Truncate the text message to keep the most relevant parts (the start and end).
                 truncated_str = (
-                    msg_bytes[:head_len].decode("utf-8", "ignore")
-                    + self.truncation_message
-                    + msg_bytes[-tail_len:].decode("utf-8", "ignore")
+                    f"{msg_bytes[:head_len].decode('utf-8', 'ignore')}"
+                    f"{self.truncation_message}"
+                    f"{msg_bytes[-tail_len:].decode('utf-8', 'ignore')}"
                 )
             result["message_header"] = truncated_str
 
@@ -199,9 +275,9 @@ class TruncationFormatter(Formatter):
                 tail_len = available_length - head_len
 
                 truncated_str = (
-                    msg_bytes[:head_len].decode("utf-8", "ignore")
-                    + self.truncation_message
-                    + msg_bytes[-tail_len:].decode("utf-8", "ignore")
+                    f"{msg_bytes[:head_len].decode('utf-8', 'ignore')}"
+                    f"{self.truncation_message}"
+                    f"{msg_bytes[-tail_len:].decode('utf-8', 'ignore')}"
                 )
             # Send the safely truncated string directly as the HTTP body
             result["data"] = truncated_str.encode(
