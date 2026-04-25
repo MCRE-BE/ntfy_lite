@@ -50,6 +50,7 @@ optional-dependencies.test = [
 ]
 urls.Homepage = "https://github.com/MCRE-BE/ntfy_lite"
 urls.Repository = "https://github.com/MCRE-BE/ntfy_lite"
+scripts.ntfy-lite = "ntfy_lite.cli:main"
 urlsDocumentation = "https://mcre-be.github.io/ntfy_lite/"
 
 [dependency-groups]
