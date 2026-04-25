@@ -68,7 +68,10 @@ class Action(abc.ABC):
         self: Self,
         attrs: tuple[str, ...],
     ) -> str:
-        return ", ".join((self.action, *(f"{attr}={v}" for attr in attrs if (v := getattr(self, attr)) is not None)))
+        return ", ".join((
+            self.action,
+            *(f"{attr}={val}" for attr in attrs if (val := getattr(self, attr)) is not None),
+        ))
 
 
 class ViewAction(Action):
@@ -157,4 +160,4 @@ class HttpAction(Action):
         if not self.headers:
             return main
         headers_str = ", ".join(f"headers.{key}={value}" for key, value in self.headers.items())
-        return main + ", " + headers_str
+        return f"{main}, {headers_str}"
