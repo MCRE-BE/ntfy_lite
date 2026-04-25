@@ -127,13 +127,34 @@ def _buffer_429(
     headers: dict[str, str],
     buffer: typing.Any | None,
 ) -> bool:
-    """Helper to handle HTTP 429 buffering logic."""
+    """Helper to handle HTTP 429 buffering logic.
+
+    When the ntfy server returns a rate limit error (HTTP 429), this function
+    intercepts the payload and stores it into the asynchronous SQLite buffer for later retries.
+    If the payload is a file attachment, it safely reads its content up to a configured limit
+    (`buffer.max_file_size`) to prevent out-of-memory errors before storing it.
+    """
     if buffer is None:
         return False
 
     logger.warning(f"NTFY rate limit exceeded (HTTP 429) for '{topic}'. Buffering message.")
-    data_str = data if isinstance(data, str) else "Original file attachment was not buffered due to HTTP 429."
-    buffer.add(topic, str(url), data_str, headers)
+
+    if isinstance(data, str):
+        data_to_store = data
+    elif hasattr(data, "read"):
+        with contextlib.suppress(Exception):
+            data.seek(0)
+        try:
+            # Limit reading to prevent memory exhaustion
+            limit = getattr(buffer, "max_file_size", 5 * 1024 * 1024)
+            data_to_store = data.read(limit)
+        except Exception:
+            data_to_store = "Original file attachment was not buffered due to HTTP 429 and could not be read."
+        with contextlib.suppress(Exception):
+            data.seek(0)
+    else:
+        data_to_store = ""
+    buffer.add(topic, str(url), data_to_store, headers)
     return True
 
 
