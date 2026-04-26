@@ -14,6 +14,7 @@ __all__ = [
     "Formatter",
     "AttachmentFormatter",
     "EmptyFormatter",
+    "TemplateFormatter",
     "TruncationFormatter",
 ]
 from .actions import Action, HttpAction, HttpMethod, ViewAction
@@ -22,6 +23,7 @@ from .formatter import (
     AttachmentFormatter,
     EmptyFormatter,
     Formatter,
+    TemplateFormatter,
     TruncationFormatter,
 )
 from .handler import NtfyHandler

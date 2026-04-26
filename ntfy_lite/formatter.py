@@ -25,14 +25,14 @@ class FormatterPayload:
 
     Attributes
     ----------
-    - data: typing.IO | str (The HTTP body)
+    - data: typing.IO | str | bytes (The HTTP body)
     - message_header: str | None (The Message HTTP header)
     - filename_header: str | None (The Filename HTTP header)
     - file_to_close: typing.IO | None (File handle to close after send)
     - temp_file_path: str | None (Temporary file to delete after send)
     """
 
-    data: typing.IO[typing.Any] | str
+    data: typing.IO[typing.Any] | str | bytes
     message_header: str | None = None
     filename_header: str | None = None
     file_to_close: typing.IO[typing.Any] | None = None
@@ -136,7 +136,7 @@ class AttachmentFormatter(Formatter):
             result["filename_header"] = "traceback.txt"
         else:
             # The message fits within limits, we can send it directly as the HTTP body.
-            result["data"] = message.encode(encoding="latin-1", errors="replace").decode(encoding="latin-1")
+            result["data"] = message.encode("utf-8")
 
         return result
 
@@ -156,15 +156,69 @@ class EmptyFormatter(Formatter):
         result = self._default_payload()
 
         if len(msg_bytes) > self.max_length:
-            result["data"] = self.truncation_message.encode(
-                encoding="latin-1",
-                errors="replace",
-            ).decode(encoding="latin-1")
+            result["data"] = self.truncation_message.encode("utf-8")
         else:
-            result["data"] = message.encode(
-                encoding="latin-1",
-                errors="replace",
-            ).decode(encoding="latin-1")
+            result["data"] = msg_bytes
+
+        return result
+
+
+class TemplateFormatter(Formatter):
+    """Template format handler.
+
+    Handles character limits by applying a user-defined template string
+    to substitute the middle or other parts of the text out.
+    """
+
+    def __init__(
+        self: Self,
+        max_length: int = 4000,
+        truncation_message: str = "\n... [truncated] ...\n",
+        template: str = "{head}{truncation_message}{tail}",
+    ) -> None:
+        super().__init__(max_length=max_length, truncation_message=truncation_message)
+        self.template = template
+
+    def process(
+        self: Self,
+        message: str,
+    ) -> FormatterPayload:
+        msg_bytes = message.encode("utf-8")
+        result = self._default_payload()
+
+        if len(msg_bytes) > self.max_length:
+            template_len = len(
+                self.template.format(
+                    head="",
+                    truncation_message=self.truncation_message,
+                    tail="",
+                ).encode("utf-8")
+            )
+            available_length = self.max_length - template_len
+
+            if available_length <= 0:
+                truncated_str = self.template.format(
+                    head="",
+                    truncation_message=self.truncation_message,
+                    tail="",
+                )
+            else:
+                head_len = available_length // 2
+                bias = 50 if available_length > 100 else 0
+                head_len -= bias
+                tail_len = available_length - head_len
+
+                head_str = msg_bytes[:head_len].decode("utf-8", "ignore")
+                tail_str = msg_bytes[-tail_len:].decode("utf-8", "ignore")
+
+                truncated_str = self.template.format(
+                    head=head_str,
+                    truncation_message=self.truncation_message,
+                    tail=tail_str,
+                )
+            result["data"] = truncated_str.encode("utf-8")
+        else:
+            result["data"] = msg_bytes
 
         return result
 
@@ -204,15 +258,9 @@ class TruncationFormatter(Formatter):
                     + msg_bytes[-tail_len:].decode("utf-8", "ignore")
                 )
             # Send the safely truncated string directly as the HTTP body
-            result["data"] = truncated_str.encode(
-                encoding="latin-1",
-                errors="replace",
-            ).decode(encoding="latin-1")
+            result["data"] = truncated_str.encode("utf-8")
         else:
             # The message fits within limits, we can send it directly as the HTTP body.
-            result["data"] = message.encode(
-                encoding="latin-1",
-                errors="replace",
-            ).decode(encoding="latin-1")
+            result["data"] = msg_bytes
 
         return result
