@@ -5,8 +5,10 @@ on:
       - main
       - master
   workflow_dispatch:
+
 permissions:
   issues: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
