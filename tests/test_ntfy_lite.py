@@ -440,7 +440,7 @@ def test_long_message_truncation_no_attachment(
     # Since we are using TruncationFormatter by default, the truncated text
     # is placed in the HTTP body (data) instead of the Message header.
     assert "Message" not in headers
-    assert "[truncated]" in data
+    assert b"[truncated]" in data
     assert len(data) < 4500
 
 

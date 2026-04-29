@@ -169,14 +169,7 @@ def _build_headers(
     at: str | None,
     payload: _DataPayload,
 ) -> dict[str, str]:
-    direct_mapping: dict[str, typing.Any] = {
-        "Title": title,
-        "At": at,
-        "Click": click,
-        "Email": email,
-        "Icon": icon,
-    }
-    headers = {key: value for key, value in direct_mapping.items() if value}
+    headers = {k: v for k, v in (("Title", title), ("At", at), ("Click", click), ("Email", email), ("Icon", icon)) if v}
 
     if payload.message_header is not None:
         # use RFC 2047 base64 encoding to support newlines and utf-8 securely

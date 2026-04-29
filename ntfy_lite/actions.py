@@ -55,10 +55,7 @@ class Action(abc.ABC):
         self.action = action
         self.label = label
         self.url = url
-        if clear:
-            self.clear = "true"
-        else:
-            self.clear = "false"
+        self.clear = str(clear).lower()
 
     @abc.abstractmethod
     def __str__(self: Self) -> str:
