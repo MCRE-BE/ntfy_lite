@@ -5,7 +5,6 @@
 # Import Statement #
 ####################
 import abc
-import io
 import sys
 import typing
 from dataclasses import dataclass
@@ -95,12 +94,21 @@ class Formatter(abc.ABC):
         """
 
 
-class AttachmentFormatter(Formatter):
-    """Formatter of the attachment text.
+class TemplateFormatter(Formatter):
+    """Template format handler.
 
-    If the text exceeds a given limit, ntfy converts the whole thing to an attachment.
-    We bypass this by intentionally truncating the text and generating our own attachment.
+    Allows substituting the middle of the text out using a user-defined template string
+    (e.g., "{head}{truncation_message}{tail}") when character limits are exceeded.
     """
+
+    def __init__(
+        self: Self,
+        max_length: int = 4000,
+        truncation_message: str = "\n... [truncated] ...\n",
+        template: str = "{head}{truncation_message}{tail}",
+    ) -> None:
+        super().__init__(max_length, truncation_message)
+        self.template = template
 
     def process(
         self: Self,
@@ -110,53 +118,28 @@ class AttachmentFormatter(Formatter):
         result = self._default_payload()
 
         if len(msg_bytes) > self.max_length:
-            trunc_msg_bytes = self.truncation_message.encode("utf-8")
-            available_length = self.max_length - len(trunc_msg_bytes)
+            # Let's find out how many bytes we can allocate for head and tail combined.
+            template_overhead = len(
+                self.template.format(head="", tail="", truncation_message=self.truncation_message).encode("utf-8")
+            )
+            available_length = self.max_length - template_overhead
 
             if available_length <= 0:
-                truncated_str = self.truncation_message
+                truncated_str = self.template.format(head="", tail="", truncation_message=self.truncation_message)
             else:
-                head_len = available_length // 4
+                head_len = available_length // 2
                 tail_len = available_length - head_len
-                # 1. Truncate the text message to keep the most relevant parts (the start and end).
-                truncated_str = (
-                    msg_bytes[:head_len].decode("utf-8", "ignore")
-                    + self.truncation_message
-                    + msg_bytes[-tail_len:].decode("utf-8", "ignore")
+
+                head_str = msg_bytes[:head_len].decode("utf-8", "ignore")
+                tail_str = msg_bytes[-tail_len:].decode("utf-8", "ignore")
+
+                truncated_str = self.template.format(
+                    head=head_str,
+                    tail=tail_str,
+                    truncation_message=self.truncation_message,
                 )
-            result["message_header"] = truncated_str
 
-            # 2. Provide the complete, un-truncated string in a file-like object.
-            tf = io.BytesIO(msg_bytes)
-
-            # 3. Queue the file-like object to be uploaded in the HTTP body.
-            result["file_to_close"] = tf
-            result["temp_file_path"] = None
-            result["data"] = tf
-            result["filename_header"] = "traceback.txt"
-        else:
-            # The message fits within limits, we can send it directly as the HTTP body.
-            result["data"] = message.encode(encoding="latin-1", errors="replace").decode(encoding="latin-1")
-
-        return result
-
-
-class EmptyFormatter(Formatter):
-    """Empty format handler.
-
-    Drops the message body entirely if it exceeds the limit and only returns
-    the truncation note, safely avoiding ntfy's attachment mechanism.
-    """
-
-    def process(
-        self: Self,
-        message: str,
-    ) -> FormatterPayload:
-        msg_bytes = message.encode("utf-8")
-        result = self._default_payload()
-
-        if len(msg_bytes) > self.max_length:
-            result["data"] = self.truncation_message.encode(
+            result["data"] = truncated_str.encode(
                 encoding="latin-1",
                 errors="replace",
             ).decode(encoding="latin-1")

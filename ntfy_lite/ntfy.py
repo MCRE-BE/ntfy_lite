@@ -290,7 +290,7 @@ def push(
     buffer : Any | None, optional
         Buffer object for retrying messages on HTTP 429
     formatter : Formatter | None, optional
-        define how large payloads are formatted (e.g. TruncationFormatter or AttachmentFormatter)
+        define how large payloads are formatted (e.g. TruncationFormatter or TemplateFormatter)
     """
 
     # the message manager handles files and long messages,
