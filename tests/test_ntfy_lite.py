@@ -401,6 +401,20 @@ def test_handler_disable_db_path_env(monkeypatch: pytest.MonkeyPatch):
     assert handler._buffer is None
 
 
+def test_handler_missing_level2priority_mapping(monkeypatch: pytest.MonkeyPatch):
+    """Test that NtfyHandler raises ValueError when missing a default level mapping."""
+    monkeypatch.delenv("NTFY_LITE_DISABLE_BUFFER", raising=False)
+
+    # Create a custom mapping missing a required level mapping
+    from ntfy_lite.config import level2priority
+
+    custom = level2priority.copy()
+    del custom[logging.INFO]
+
+    with pytest.raises(ValueError, match="missing mapping from logging level 20 to ntfy priority level"):
+        ntfy.NtfyHandler("test_topic", twice_in_a_row=False, level2priority=custom)
+
+
 def test_long_message_truncation_no_attachment(
     monkeypatch: pytest.MonkeyPatch,
 ):
