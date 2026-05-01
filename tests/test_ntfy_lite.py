@@ -457,3 +457,92 @@ def test_data_manager_invalid_filepath(tmp_path: Path):
     non_existent_file = tmp_path / "does_not_exist.txt"
     with pytest.raises(FileNotFoundError, match="failed to find file to attach"):
         _DataManager(message=None, filepath=non_existent_file)
+
+
+# --- _buffer_429 tests ---
+
+from ntfy_lite.ntfy import _buffer_429
+
+
+def test_buffer_429_no_buffer():
+    assert _buffer_429("test", "http://test", "data", {}, None) is False
+
+
+def test_buffer_429_string_data():
+    class MockBuffer:
+        def __init__(self):
+            self.added = False
+            self.data = None
+
+        def add(self, topic, url, data_to_store, headers):
+            _ = (topic, url, headers)
+            self.added = True
+            self.data = data_to_store
+
+    buf = MockBuffer()
+    assert _buffer_429("test", "http://test", "string_data", {}, buf) is True
+    assert buf.added
+    assert buf.data == "string_data"
+
+
+def test_buffer_429_file_data():
+    import io
+
+    class MockBuffer:
+        def __init__(self):
+            self.added = False
+            self.data = None
+            self.max_file_size = 5
+
+        def add(self, topic, url, data_to_store, headers):
+            _ = (topic, url, headers)
+            self.added = True
+            self.data = data_to_store
+
+    buf = MockBuffer()
+    file_data = io.BytesIO(b"1234567890")
+    assert _buffer_429("test", "http://test", file_data, {}, buf) is True
+    assert buf.added
+    assert buf.data == b"12345"
+
+
+def test_buffer_429_file_read_error():
+    class BrokenFile:
+        def read(self, *args, **kwargs):
+            raise OSError("Read failed")
+
+        def seek(self, *args, **kwargs):
+            pass
+
+    class MockBuffer:
+        def __init__(self):
+            self.added = False
+            self.data = None
+
+        def add(self, topic, url, data_to_store, headers):
+            _ = (topic, url, headers)
+            self.added = True
+            self.data = data_to_store
+
+    buf = MockBuffer()
+    broken_file = BrokenFile()
+    assert _buffer_429("test", "http://test", typing.cast(typing.IO[typing.Any], broken_file), {}, buf) is True
+    assert buf.added
+    assert buf.data == "Original file attachment was not buffered due to HTTP 429 and could not be read."
+
+
+def test_buffer_429_other_data():
+    class MockBuffer:
+        def __init__(self):
+            self.added = False
+            self.data = None
+
+        def add(self, topic, url, data_to_store, headers):
+            _ = (topic, url, headers)
+            self.added = True
+            self.data = data_to_store
+
+    buf = MockBuffer()
+    assert _buffer_429("test", "http://test", typing.cast(typing.IO[typing.Any], 12345), {}, buf) is True
+    assert buf.added
+    assert buf.data == ""
