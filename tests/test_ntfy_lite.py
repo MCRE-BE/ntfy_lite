@@ -457,3 +457,62 @@ def test_data_manager_invalid_filepath(tmp_path: Path):
     non_existent_file = tmp_path / "does_not_exist.txt"
     with pytest.raises(FileNotFoundError, match="failed to find file to attach"):
         _DataManager(message=None, filepath=non_existent_file)
+
+
+def test_handler_emit_duplicate(monkeypatch: pytest.MonkeyPatch):
+    call_count = [0]
+
+    class MockResponse:
+        ok = True
+        status_code = 200
+        reason = "OK"
+
+    def mock_put(*args: typing.Any, **kwargs: typing.Any) -> MockResponse:
+        call_count[0] += 1
+        return MockResponse()
+
+    monkeypatch.setattr("requests.Session.put", mock_put)
+
+    handler = ntfy.NtfyHandler("test_topic", twice_in_a_row=False)
+    record = logging.LogRecord("test.logger", logging.INFO, "", -1, "Test duplicate", None, None)
+
+    # First emit should call push
+    handler.emit(record)
+    assert call_count[0] == 1
+
+    # Second emit with same record should not call push
+    handler.emit(record)
+    assert call_count[0] == 1
+
+    # Third emit with different message should call push
+    record_diff = logging.LogRecord("test.logger", logging.INFO, "", -1, "Test diff", None, None)
+    handler.emit(record_diff)
+    assert call_count[0] == 2
+
+
+def test_handler_is_new_record():
+    handler = ntfy.NtfyHandler("test_topic", twice_in_a_row=False)
+    assert handler._last_messages == {}
+
+    # Create log records
+    record1 = logging.LogRecord("test.logger", logging.INFO, "", -1, "Test message 1", None, None)
+    record1_dup = logging.LogRecord("test.logger", logging.INFO, "", -1, "Test message 1", None, None)
+    record2 = logging.LogRecord("test.logger", logging.INFO, "", -1, "Test message 2", None, None)
+    record3 = logging.LogRecord("other.logger", logging.INFO, "", -1, "Test message 1", None, None)
+
+    # Initially record1 is new
+    assert handler._is_new_record(record1) is True
+    # Now it shouldn't be new
+    assert handler._is_new_record(record1_dup) is False
+    # A new message for same logger is new
+    assert handler._is_new_record(record2) is True
+    # Now it shouldn't be new
+    assert handler._is_new_record(record2) is False
+    # Same message but for different logger is new
+    assert handler._is_new_record(record3) is True
+
+    # Test when twice_in_a_row is True (so _last_messages is None)
+    handler2 = ntfy.NtfyHandler("test_topic", twice_in_a_row=True)
+    assert handler2._last_messages is None
+    assert handler2._is_new_record(record1) is True
+    assert handler2._is_new_record(record1_dup) is True
