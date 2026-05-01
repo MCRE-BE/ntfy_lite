@@ -32,6 +32,8 @@ import typing
 import warnings
 from pathlib import Path
 
+import requests
+
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -44,6 +46,7 @@ except ImportError:
     _HAS_BUFFER = False
 
 from .config import Priority, level2priority, level2tags
+from .error import NtfyError
 from .formatter import Formatter
 from .ntfy import push
 
@@ -188,7 +191,7 @@ class NtfyHandler(logging.Handler):
                 buffer=self._buffer,
                 formatter=self._formatter,
             )
-        except Exception as e:
+        except (NtfyError, requests.RequestException, ValueError, OSError) as e:
             logging.exception("NTFY Log Handler failed")
             if self._error_callback is not None:
                 self._error_callback(e)
