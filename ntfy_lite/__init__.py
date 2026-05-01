@@ -12,16 +12,14 @@ __all__ = [
     "Priority",
     "level2priority",
     "Formatter",
-    "AttachmentFormatter",
-    "EmptyFormatter",
+    "TemplateFormatter",
     "TruncationFormatter",
 ]
 from .actions import Action, HttpAction, HttpMethod, ViewAction
 from .config import LoggingLevel, Priority, level2priority, level2tags
 from .formatter import (
-    AttachmentFormatter,
-    EmptyFormatter,
     Formatter,
+    TemplateFormatter,
     TruncationFormatter,
 )
 from .handler import NtfyHandler
