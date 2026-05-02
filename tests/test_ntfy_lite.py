@@ -14,7 +14,7 @@ import pytest
 
 import ntfy_lite as ntfy
 from ntfy_lite.buffer import NtfyBuffer
-
+from ntfy_lite.ntfy import _buffer_429
 
 ############
 # FIXTURES #
@@ -460,10 +460,6 @@ def test_data_manager_invalid_filepath(tmp_path: Path):
 
 
 # --- _buffer_429 tests ---
-
-from ntfy_lite.ntfy import _buffer_429
-
-
 def test_buffer_429_no_buffer():
     assert _buffer_429("test", "http://test", "data", {}, None) is False
 
@@ -546,3 +542,42 @@ def test_buffer_429_other_data():
     assert _buffer_429("test", "http://test", typing.cast("typing.IO[typing.Any]", 12345), {}, buf) is True
     assert buf.added
     assert buf.data == ""
+
+
+def test_handler_emit_error_path(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture):
+    """Test that NtfyHandler.emit handles exceptions correctly."""
+
+    def mock_push(*args, **kwargs):
+        raise ValueError("Simulated push error")
+
+    monkeypatch.setattr(ntfy.handler, "push", mock_push)
+
+    error_callback_called = False
+    caught_exception = None
+
+    def mock_error_callback(e: Exception):
+        nonlocal error_callback_called
+        nonlocal caught_exception
+        error_callback_called = True
+        caught_exception = e
+
+    handler = ntfy.NtfyHandler("test_topic", error_callback=mock_error_callback)
+
+    handle_error_called = False
+
+    def mock_handle_error(record):
+        nonlocal handle_error_called
+        handle_error_called = True
+
+    monkeypatch.setattr(handler, "handleError", mock_handle_error)
+
+    record = logging.LogRecord("test_logger", logging.INFO, "", -1, "test message", None, None)
+
+    with caplog.at_level(logging.ERROR):
+        handler.emit(record)
+
+    assert error_callback_called
+    assert isinstance(caught_exception, ValueError)
+    assert str(caught_exception) == "Simulated push error"
+    assert handle_error_called
+    assert "NTFY Log Handler failed" in caplog.text
