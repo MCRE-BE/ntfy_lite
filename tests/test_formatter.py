@@ -3,7 +3,7 @@
 ####################
 # IMPORT STATEMENT #
 ####################
-from ntfy_lite.formatter import AttachmentFormatter, EmptyFormatter, TruncationFormatter
+from ntfy_lite.formatter import TemplateFormatter, TruncationFormatter
 
 
 ####################
@@ -15,30 +15,6 @@ def test_truncation_formatter_short_message():
     result = formatter.process(message)
 
     assert result["data"] == message
-    assert result["message_header"] is None
-    assert result["filename_header"] is None
-    assert result["file_to_close"] is None
-    assert result["temp_file_path"] is None
-
-
-def test_empty_formatter_short_message():
-    formatter = EmptyFormatter()
-    message = "Short message"
-    result = formatter.process(message)
-
-    assert result["data"] == message
-    assert result["message_header"] is None
-    assert result["filename_header"] is None
-    assert result["file_to_close"] is None
-    assert result["temp_file_path"] is None
-
-
-def test_empty_formatter_long_message():
-    formatter = EmptyFormatter()
-    message = "A" * 4500
-    result = formatter.process(message)
-
-    assert result["data"] == "\n... [truncated] ...\n"
     assert result["message_header"] is None
     assert result["filename_header"] is None
     assert result["file_to_close"] is None
@@ -86,8 +62,8 @@ def test_truncation_formatter_custom_length():
     assert trunc_msg in result3["data"]
 
 
-def test_attachment_formatter_short_message():
-    formatter = AttachmentFormatter()
+def test_template_formatter_short_message():
+    formatter = TemplateFormatter()
     message = "Short message"
     result = formatter.process(message)
 
@@ -98,17 +74,31 @@ def test_attachment_formatter_short_message():
     assert result["temp_file_path"] is None
 
 
-def test_attachment_formatter_custom_length():
-    trunc_msg = "[CUT]"
-    formatter = AttachmentFormatter(max_length=100, truncation_message=trunc_msg)
+def test_template_formatter_long_message():
+    formatter = TemplateFormatter()
+    message = "A" * 4500
+    result = formatter.process(message)
+
+    assert len(result["data"]) <= 4000
+    assert "... [truncated] ..." in result["data"]
+
+    assert result["message_header"] is None
+    assert result["filename_header"] is None
+    assert result["file_to_close"] is None
+    assert result["temp_file_path"] is None
+
+
+def test_template_formatter_custom_template():
+    trunc_msg = " [CUT] "
+    template = "START: {head}{truncation_message}{tail} :END"
+    formatter = TemplateFormatter(max_length=100, truncation_message=trunc_msg, template=template)
     message = "A" * 150
     result = formatter.process(message)
 
-    assert result["message_header"] is not None
-    assert len(result["message_header"]) <= 100
-    assert trunc_msg in result["message_header"]
-    assert result["file_to_close"] is not None
-    assert result["filename_header"] == "traceback.txt"
+    assert len(result["data"]) <= 100
+    assert trunc_msg in result["data"]
+    assert result["data"].startswith("START: ")
+    assert result["data"].endswith(" :END")
 
 
 def test_truncation_formatter_long_unicode_message():
