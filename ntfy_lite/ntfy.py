@@ -142,15 +142,15 @@ def _buffer_429(
     if isinstance(data, str):
         data_to_store = data
     elif hasattr(data, "read"):
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(OSError, AttributeError, ValueError):
             data.seek(0)
         try:
             # Limit reading to prevent memory exhaustion
             limit = getattr(buffer, "max_file_size", 5 * 1024 * 1024)
             data_to_store = data.read(limit)
-        except Exception:
+        except (OSError, AttributeError, ValueError):
             data_to_store = "Original file attachment was not buffered due to HTTP 429 and could not be read."
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(OSError, AttributeError, ValueError):
             data.seek(0)
     else:
         data_to_store = ""
