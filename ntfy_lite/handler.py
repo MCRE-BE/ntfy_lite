@@ -162,7 +162,7 @@ class NtfyHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
         """Push the record as an ntfy message."""
 
-        if self._last_messages and not self._is_new_record(record):
+        if self._last_messages is not None and not self._is_new_record(record):
             return
 
         filepath = self._level2filepath.get(record.levelno)
