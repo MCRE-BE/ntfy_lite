@@ -526,7 +526,7 @@ def test_buffer_429_file_read_error():
 
     buf = MockBuffer()
     broken_file = BrokenFile()
-    assert _buffer_429("test", "http://test", typing.cast(typing.IO[typing.Any], broken_file), {}, buf) is True
+    assert _buffer_429("test", "http://test", typing.cast("typing.IO[typing.Any]", broken_file), {}, buf) is True
     assert buf.added
     assert buf.data == "Original file attachment was not buffered due to HTTP 429 and could not be read."
 
@@ -543,6 +543,6 @@ def test_buffer_429_other_data():
             self.data = data_to_store
 
     buf = MockBuffer()
-    assert _buffer_429("test", "http://test", typing.cast(typing.IO[typing.Any], 12345), {}, buf) is True
+    assert _buffer_429("test", "http://test", typing.cast("typing.IO[typing.Any]", 12345), {}, buf) is True
     assert buf.added
     assert buf.data == ""
