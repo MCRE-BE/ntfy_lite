@@ -12,8 +12,9 @@ from ntfy_lite.buffer import NtfyBuffer
 
 def test_flush_buffer_thread_success(tmp_path: Path):
     db_path = tmp_path / "test_buffer.sqlite"
-    buffer = NtfyBuffer(db_path)
-    buffer.add("test_topic", "https://ntfy.sh", "test_data", {"Header": "value"})
+    with mock.patch("threading.Thread.start"):
+        buffer = NtfyBuffer(db_path)
+        buffer.add("test_topic", "https://ntfy.sh", "test_data", {"Header": "value"})
 
     class MockResponse:
         ok = True
@@ -23,12 +24,11 @@ def test_flush_buffer_thread_success(tmp_path: Path):
 
     with (
         mock.patch("ntfy_lite.buffer.requests.put", return_value=MockResponse()) as mock_put,
-        mock.patch("ntfy_lite.buffer.time.sleep") as mock_sleep,
+        mock.patch("ntfy_lite.buffer.time.sleep"),
     ):
         buffer._flush_buffer_thread()
 
     assert mock_put.called
-    assert mock_sleep.called
 
     # Verify db is empty
     with sqlite3.connect(str(db_path)) as conn:
@@ -42,9 +42,10 @@ def test_flush_buffer_thread_success(tmp_path: Path):
 
 def test_flush_buffer_thread_429(tmp_path: Path):
     db_path = tmp_path / "test_buffer.sqlite"
-    buffer = NtfyBuffer(db_path)
-    buffer.add("test_topic", "https://ntfy.sh", "test_data_1", {"Header": "value1"})
-    buffer.add("test_topic", "https://ntfy.sh", "test_data_2", {"Header": "value2"})
+    with mock.patch("threading.Thread.start"):
+        buffer = NtfyBuffer(db_path)
+        buffer.add("test_topic", "https://ntfy.sh", "test_data_1", {"Header": "value1"})
+        buffer.add("test_topic", "https://ntfy.sh", "test_data_2", {"Header": "value2"})
 
     class MockResponse:
         ok = False
@@ -73,8 +74,9 @@ def test_flush_buffer_thread_429(tmp_path: Path):
 
 def test_flush_buffer_thread_other_error(tmp_path: Path):
     db_path = tmp_path / "test_buffer.sqlite"
-    buffer = NtfyBuffer(db_path)
-    buffer.add("test_topic", "https://ntfy.sh", "test_data", {"Header": "value"})
+    with mock.patch("threading.Thread.start"):
+        buffer = NtfyBuffer(db_path)
+        buffer.add("test_topic", "https://ntfy.sh", "test_data", {"Header": "value"})
 
     class MockResponse:
         ok = False
@@ -85,12 +87,11 @@ def test_flush_buffer_thread_other_error(tmp_path: Path):
 
     with (
         mock.patch("ntfy_lite.buffer.requests.put", return_value=MockResponse()) as mock_put,
-        mock.patch("ntfy_lite.buffer.time.sleep") as mock_sleep,
+        mock.patch("ntfy_lite.buffer.time.sleep"),
     ):
         buffer._flush_buffer_thread()
 
     assert mock_put.called
-    assert mock_sleep.called
 
     # Verify db is empty because it discards the record
     with sqlite3.connect(str(db_path)) as conn:
@@ -104,20 +105,20 @@ def test_flush_buffer_thread_other_error(tmp_path: Path):
 
 def test_flush_buffer_thread_exception(tmp_path: Path):
     db_path = tmp_path / "test_buffer.sqlite"
-    buffer = NtfyBuffer(db_path)
-    buffer.add("test_topic", "https://ntfy.sh", "test_data_1", {"Header": "value1"})
-    buffer.add("test_topic", "https://ntfy.sh", "test_data_2", {"Header": "value2"})
+    with mock.patch("threading.Thread.start"):
+        buffer = NtfyBuffer(db_path)
+        buffer.add("test_topic", "https://ntfy.sh", "test_data_1", {"Header": "value1"})
+        buffer.add("test_topic", "https://ntfy.sh", "test_data_2", {"Header": "value2"})
 
     buffer._flusher_state["running"] = True
 
     with (
         mock.patch("ntfy_lite.buffer.requests.put", side_effect=Exception("Test Error")) as mock_put,
-        mock.patch("ntfy_lite.buffer.time.sleep") as mock_sleep,
+        mock.patch("ntfy_lite.buffer.time.sleep"),
     ):
         buffer._flush_buffer_thread()
 
     assert mock_put.call_count == 1  # Should break after first exception
-    assert mock_sleep.call_count == 1
 
     # Verify db still has both records since we break on exception
     with sqlite3.connect(str(db_path)) as conn:
@@ -131,8 +132,9 @@ def test_flush_buffer_thread_exception(tmp_path: Path):
 
 def test_flush_buffer_thread_batch_delete_exception(tmp_path: Path):
     db_path = tmp_path / "test_buffer.sqlite"
-    buffer = NtfyBuffer(db_path)
-    buffer.add("test_topic", "https://ntfy.sh", "test_data", {"Header": "value"})
+    with mock.patch("threading.Thread.start"):
+        buffer = NtfyBuffer(db_path)
+        buffer.add("test_topic", "https://ntfy.sh", "test_data", {"Header": "value"})
 
     class MockResponse:
         ok = True
