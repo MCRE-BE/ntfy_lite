@@ -40,23 +40,23 @@ class FormatterPayload:
 
     def get(
         self: Self,
-        key: typing.Any,
-        default: typing.Any = None,
-    ) -> typing.Any:
+        key: str,
+        default: object = None,
+    ) -> typing.Any:  # noqa: ANN401
         """Retrieve one of the defined fields from the dictionnary."""
         return getattr(self, key, default)
 
     def __getitem__(
         self: Self,
-        key: typing.Any,
-    ) -> typing.Any:
+        key: str,
+    ) -> typing.Any:  # noqa: ANN401
         """Enable dataclass to be subscriptable."""
         return getattr(self, key, None)
 
     def __setitem__(
         self: Self,
-        key: typing.Any,
-        value: typing.Any = None,
+        key: str,
+        value: object = None,
     ) -> None:
         """Enable dataclass to be subscriptable."""
         setattr(self, key, value)
@@ -81,6 +81,7 @@ class Formatter(abc.ABC):
         self: Self,
         message: str,
     ) -> FormatterPayload:
+        """Process the message string and return properties for the DataPayload."""
         """Process the message string and return properties for the DataPayload.
 
         Parameters
@@ -106,6 +107,7 @@ class AttachmentFormatter(Formatter):
         self: Self,
         message: str,
     ) -> FormatterPayload:
+        """Process the message string and return properties for the DataPayload."""
         msg_bytes = message.encode("utf-8")
         result = self._default_payload()
 
@@ -152,6 +154,7 @@ class EmptyFormatter(Formatter):
         self: Self,
         message: str,
     ) -> FormatterPayload:
+        """Process the message string and return properties for the DataPayload."""
         msg_bytes = message.encode("utf-8")
         result = self._default_payload()
 
@@ -180,6 +183,7 @@ class TruncationFormatter(Formatter):
         self: Self,
         message: str,
     ) -> FormatterPayload:
+        """Process the message string and return properties for the DataPayload."""
         msg_bytes = message.encode("utf-8")
         result = self._default_payload()
 

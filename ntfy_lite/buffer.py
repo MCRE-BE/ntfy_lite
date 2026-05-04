@@ -145,7 +145,7 @@ class NtfyBuffer:
                     else:
                         # Some other failure, discard the buffered message and log the trace
                         logging.error(
-                            f"NTFY async retry failed: {response.reason}. Discarding buffered message id {row_id}."
+                            f"NTFY async retry failed: {response.reason}. Discarding buffered message id {row_id}.",
                         )
                         to_delete.append((row_id,))
                 except Exception:

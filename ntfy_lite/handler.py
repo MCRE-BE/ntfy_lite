@@ -63,6 +63,7 @@ class NtfyHandler(logging.Handler):
         self: Self,
         topic: str,
         url: str = "https://ntfy.sh",
+        *,
         twice_in_a_row: bool = True,
         error_callback: typing.Callable[[Exception], typing.Any] | None = None,
         level2tags: dict[int, tuple[str, ...]] = level2tags,
@@ -71,7 +72,7 @@ class NtfyHandler(logging.Handler):
         level2email: dict[int, str] | None = None,
         db_path: Path | str | bool | None = None,
         formatter: Formatter | None = None,
-    ):
+    ) -> None:
         """Start.
 
         Parameters
@@ -143,9 +144,12 @@ class NtfyHandler(logging.Handler):
         # ... Check logging level's
         for logging_level in level2priority:
             if logging_level not in self._level2priority:
-                raise ValueError(
+                msg_0 = (
                     f"NtfyHandler, level2priority argument: missing mapping from "
-                    f"logging level {logging_level} to ntfy priority level",
+                    f"logging level {logging_level} to ntfy priority level"
+                )
+                raise ValueError(
+                    msg_0,
                 )
 
     def _is_new_record(self, record: logging.LogRecord) -> bool:
@@ -174,7 +178,7 @@ class NtfyHandler(logging.Handler):
                     typing.cast(
                         "dict[str, typing.Any]",
                         record.extra,
-                    )["logger_name"]
+                    )["logger_name"],
                 )
             push(
                 topic=self._topic,

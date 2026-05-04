@@ -33,7 +33,7 @@ class NtfyError(Exception):
         Reason of the failure.
     """
 
-    def __init__(self: Self, status_code: int, reason: str):
+    def __init__(self: Self, status_code: int, reason: str) -> None:
         self.status_code = status_code
         self.reason = reason
 

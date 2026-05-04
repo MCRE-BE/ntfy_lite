@@ -67,15 +67,17 @@ class _DataManager:
 
     def __init__(
         self: Self,
-        message: typing.Any | None,
+        message: object | None,
         filepath: Path | None,
         formatter: Formatter | None = None,
     ) -> None:
         if message is None and filepath is None:
-            raise ValueError("must push either a message or a filepath (no message nor filepath argument specified)")
+            msg = "must push either a message or a filepath (no message nor filepath argument specified)"
+            raise ValueError(msg)
 
         if filepath is not None and not filepath.is_file():
-            raise FileNotFoundError(f"failed to find file to attach ({filepath})")
+            msg = f"failed to find file to attach ({filepath})"
+            raise FileNotFoundError(msg)
 
         self._file_to_close: typing.IO[typing.Any] | None = None
         self._temp_file_path: str | None = None
@@ -108,9 +110,9 @@ class _DataManager:
 
     def __exit__(
         self: Self,
-        _,
-        __,
-        ___,
+        _: object,
+        __: object,
+        ___: object,
     ) -> None:
         # Cleanup any opened file handles or temporary files after the request has been sent.
         if self._file_to_close is not None:
@@ -125,7 +127,7 @@ def _buffer_429(
     url: str | None,
     data: typing.IO[typing.Any] | str,
     headers: dict[str, str],
-    buffer: typing.Any | None,
+    buffer: typing.Any | None,  # noqa: ANN401
 ) -> bool:
     """Helper to handle HTTP 429 buffering logic.
 
@@ -207,9 +209,9 @@ def _build_headers(
 def _execute_push(
     topic: str,
     url: str,
-    payload_data: typing.Any,
+    payload_data: typing.IO[typing.Any] | str,
     headers: dict[str, str],
-    buffer: typing.Any | None,
+    buffer: typing.Any | None,  # noqa: ANN401
 ) -> None:
     response = _session.put(
         f"{url}/{topic}",
@@ -231,7 +233,7 @@ def _execute_push(
 def push(
     topic: str,
     title: str,
-    message: typing.Any | None = None,
+    message: object | None = None,
     priority: Priority = Priority.DEFAULT,
     tags: str | collections.abc.Iterable[str] | None = None,
     click: str | None = None,
@@ -242,7 +244,7 @@ def push(
     actions: Action | collections.abc.Sequence[Action] = (),
     at: str | None = None,
     url: str | None = "https://ntfy.sh",
-    buffer: typing.Any | None = None,
+    buffer: typing.Any | None = None,  # noqa: ANN401
     formatter: Formatter | None = None,
 ) -> None:
     """Pushes a notification.

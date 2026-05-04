@@ -64,36 +64,6 @@ ignore = [
 
       "TRY002", # raise-vanilla-class
       "TC004",  # runtime-import-in-type-checking-block
-
-      # todo : fix later
-
-      "W191",
-      "E111",
-      "E114",
-      "E117",
-      "E501",   # line too long
-      "B008",   # do not perform function calls in argument defaults
-      "D206",
-      "D300",
-      "Q000",
-      "Q001",
-      "Q002",
-      "Q003",
-      "COM812",
-      "COM819",
-      "TD003",
-      "PLR0913",
-      "PLR0917",
-      "TRY003",  # Avoid specifying long messages outside the exception class
-      "TC001",
-      "CPY001",
-      "D100", "D101", "D102", "D103", "D104", "D105", "D107", "D203", "D211", "D213",
-      "ANN001", "ANN002", "ANN003", "ANN204", "ANN401",
-      "FIX002",
-      "ISC001",
-      "DTZ003",
-      "FBT001", "FBT002",
-      "EM101", "EM102",
 ]
 
 [lint.pydocstyle]
@@ -112,6 +82,14 @@ ignore-variadic-names = true
 
 [lint.extend-per-file-ignores]
 "**/tests/*" = [
+    "D100",
+    "D103",
+    "D104",
+    "ANN401",
+    "ANN002",
+    "ANN003",
+    "FBT001",
+    "FBT002",
     "ARG001",
     "D101",
     "D102",

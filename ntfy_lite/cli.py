@@ -40,7 +40,7 @@ def main() -> None:
     parser.add_argument("-c", "--click", help="URL to open when the notification is clicked.", default=None)
     parser.add_argument("-e", "--email", help="Email address to forward the notification to.", default=None)
     parser.add_argument(
-        "-f", "--filepath", type=Path, help="Path to a file to attach to the notification.", default=None
+        "-f", "--filepath", type=Path, help="Path to a file to attach to the notification.", default=None,
     )
     parser.add_argument("-a", "--attach", help="URL of a file to attach.", default=None)
     parser.add_argument("-i", "--icon", help="URL of an image to use as the notification icon.", default=None)

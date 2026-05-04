@@ -7,7 +7,6 @@
 import logging
 import sqlite3
 import tempfile
-import typing
 from pathlib import Path
 
 import pytest
@@ -27,7 +26,7 @@ def mock_requests_put(monkeypatch):
         status_code = 200
         reason = "OK"
 
-    def mock_put(*args, **kwargs):
+    def mock_put(*args: object, **kwargs: object) -> MockResponse:
         return MockResponse()
 
     monkeypatch.setattr("requests.Session.put", mock_put)
@@ -287,7 +286,7 @@ def test_error_push(monkeypatch: pytest.MonkeyPatch):
         status_code = 500
         reason = "Internal Server Error"
 
-    def mock_put(*args: typing.Any, **kwargs: typing.Any) -> MockResponse:
+    def mock_put(*args: object, **kwargs: object) -> MockResponse:
         return MockResponse()
 
     monkeypatch.setattr("requests.Session.put", mock_put)
@@ -325,7 +324,7 @@ def test_rate_limit_buffering_and_logging(
             logs.append(self.format(record))
 
     # --- Functions ---
-    def mock_put(*args: typing.Any, **kwargs) -> MockResponse:
+    def mock_put(*args: object, **kwargs: object) -> MockResponse:
         return MockResponse()
 
     # --- Variables ---
@@ -413,7 +412,7 @@ def test_long_message_truncation_no_attachment(
 
     call_args = []
 
-    def mock_put(*args: typing.Any, **kwargs: typing.Any) -> MockResponse:
+    def mock_put(*args: object, **kwargs: object) -> MockResponse:
         data = kwargs.get("data")
         if data is not None and hasattr(data, "read"):
             kwargs["data"] = data.read().decode("utf-8")
