@@ -152,7 +152,7 @@ def test_flush_buffer_thread_batch_delete_exception(tmp_path: Path):
         connect_calls += 1
         if connect_calls == 3:  # 1st: add(), 2nd: SELECT, 3rd: DELETE
             msg = "Delete Error"
-            raise Exception(msg)
+            raise ValueError(msg)
         return original_connect(*args, **kwargs)
 
     with (

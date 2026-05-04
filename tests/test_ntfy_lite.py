@@ -431,7 +431,7 @@ def test_long_message_truncation_no_attachment(
     def mock_put(*args: object, **kwargs: object) -> MockResponse:
         data = kwargs.get("data")
         if data is not None and hasattr(data, "read"):
-            kwargs["data"] = data.read().decode("utf-8")
+            kwargs["data"] = typing.cast("typing.IO[bytes]", data).read().decode("utf-8")
         call_args.append((args, kwargs))
         return MockResponse()
 

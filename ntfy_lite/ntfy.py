@@ -84,8 +84,12 @@ class _DataManager:
         self._payload = _DataPayload(data="")
 
         # Format any non-string objects (like Exceptions) into a readable traceback string
-        if message is not None and not isinstance(message, str):
+        if isinstance(message, BaseException):
             message = "".join(traceback.TracebackException.from_exception(message).format())
+        elif message is not None and not isinstance(message, str):
+            message = str(message)
+
+        message_str = str(message) if message is not None else None
 
         if filepath is not None:
             # If a file is explicitly provided by the user, we upload it as the HTTP body.
@@ -93,12 +97,12 @@ class _DataManager:
             self._payload.data = self._file_to_close
             if message is not None:
                 # The text message must be placed in the HTTP header since the body is occupied.
-                self._payload.message_header = message
+                self._payload.message_header = message_str
         elif message is not None:
             if formatter is None:
                 formatter = TruncationFormatter()
 
-            fmt_result = formatter.process(message)
+            fmt_result = formatter.process(message_str) if message_str is not None else formatter._default_payload()
             self._payload.data = fmt_result.get("data", "")
             self._payload.message_header = fmt_result.get("message_header")
             self._payload.filename_header = fmt_result.get("filename_header")
