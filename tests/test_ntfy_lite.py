@@ -482,7 +482,7 @@ def test_handler_emit_duplicate(monkeypatch: pytest.MonkeyPatch):
         status_code = 200
         reason = "OK"
 
-    def mock_put(*args: typing.Any, **kwargs: typing.Any) -> MockResponse:
+    def mock_put(*args: object, **kwargs: object) -> MockResponse:
         call_count[0] += 1
         return MockResponse()
 
@@ -537,7 +537,8 @@ def test_handler_emit_error_path(monkeypatch: pytest.MonkeyPatch, caplog: pytest
     """Test that NtfyHandler.emit handles exceptions correctly."""
 
     def mock_push(*args, **kwargs):
-        raise ValueError("Simulated push error")
+        msg = "Simulated push error"
+        raise ValueError(msg)
 
     monkeypatch.setattr(ntfy.handler, "push", mock_push)
 
@@ -618,7 +619,8 @@ def test_buffer_429_file_data():
 def test_buffer_429_file_read_error():
     class BrokenFile:
         def read(self, *args, **kwargs):
-            raise OSError("Read failed")
+            msg = "Read failed"
+            raise OSError(msg)
 
         def seek(self, *args, **kwargs):
             pass
@@ -635,16 +637,7 @@ def test_buffer_429_file_read_error():
 
     buf = MockBuffer()
     broken_file = BrokenFile()
-    assert (
-        _buffer_429(
-            "test",
-            "http://test",
-            typing.cast("typing.IO[typing.Any]", broken_file),
-            {},
-            buf,
-        )
-        is True
-    )
+    assert _buffer_429("test", "http://test", typing.cast("typing.IO[typing.Any]", broken_file), {}, buf) is True
     assert buf.added
     assert buf.data == "Original file attachment was not buffered due to HTTP 429 and could not be read."
 
@@ -661,15 +654,6 @@ def test_buffer_429_other_data():
             self.data = data_to_store
 
     buf = MockBuffer()
-    assert (
-        _buffer_429(
-            "test",
-            "http://test",
-            typing.cast("typing.IO[typing.Any]", 12345),
-            {},
-            buf,
-        )
-        is True
-    )
+    assert _buffer_429("test", "http://test", typing.cast("typing.IO[typing.Any]", 12345), {}, buf) is True
     assert buf.added
     assert buf.data == ""

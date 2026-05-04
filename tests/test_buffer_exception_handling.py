@@ -151,7 +151,8 @@ def test_flush_buffer_thread_batch_delete_exception(tmp_path: Path):
         nonlocal connect_calls
         connect_calls += 1
         if connect_calls == 3:  # 1st: add(), 2nd: SELECT, 3rd: DELETE
-            raise Exception("Delete Error")
+            msg = "Delete Error"
+            raise Exception(msg)
         return original_connect(*args, **kwargs)
 
     with (
@@ -174,7 +175,8 @@ def test_init_db_exception(
     db_path = tmp_path / "buffer.sqlite"
 
     def mock_connect(*args, **kwargs):
-        raise sqlite3.Error("Mock database connection error")
+        msg = "Mock database connection error"
+        raise sqlite3.Error(msg)
 
     monkeypatch.setattr(
         sqlite3,

@@ -67,7 +67,7 @@ class _DataManager:
 
     def __init__(
         self: Self,
-        message: BaseException | str | None,
+        message: object | None,
         filepath: Path | None,
         formatter: Formatter | None = None,
     ) -> None:
@@ -127,7 +127,7 @@ def _buffer_429(
     url: str | None,
     data: typing.IO[typing.Any] | str,
     headers: dict[str, str],
-    buffer: typing.Any | None,
+    buffer: typing.Any | None,  # noqa: ANN401
 ) -> bool:
     """Helper to handle HTTP 429 buffering logic.
 
@@ -211,7 +211,7 @@ def _execute_push(
     url: str,
     payload_data: typing.IO[typing.Any] | str,
     headers: dict[str, str],
-    buffer: typing.Any | None,
+    buffer: typing.Any | None,  # noqa: ANN401
 ) -> None:
     response = _session.put(
         f"{url}/{topic}",
@@ -233,7 +233,7 @@ def _execute_push(
 def push(
     topic: str,
     title: str,
-    message: typing.Any | None = None,
+    message: object | None = None,
     priority: Priority = Priority.DEFAULT,
     tags: str | collections.abc.Iterable[str] | None = None,
     click: str | None = None,
@@ -244,7 +244,7 @@ def push(
     actions: Action | collections.abc.Sequence[Action] = (),
     at: str | None = None,
     url: str | None = "https://ntfy.sh",
-    buffer: typing.Any | None = None,
+    buffer: typing.Any | None = None,  # noqa: ANN401
     formatter: Formatter | None = None,
 ) -> None:
     """Pushes a notification.

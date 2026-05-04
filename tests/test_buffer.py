@@ -34,7 +34,8 @@ def test_ntfy_buffer_add_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, 
     buffer = NtfyBuffer(db_path)
 
     def mock_connect(*args, **kwargs):
-        raise sqlite3.Error("Connection failed")
+        msg = "Connection failed"
+        raise sqlite3.Error(msg)
 
     # Monkeypatch sqlite3.connect ONLY for the add call
     monkeypatch.setattr("ntfy_lite.buffer.sqlite3.connect", mock_connect)
