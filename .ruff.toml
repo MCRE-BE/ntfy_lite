@@ -42,6 +42,7 @@ ignore = [
 
       "E501", #  Line too long (82 > 79 characters) (E501)
       "E701", #  multiple statements on one line (colon)
+      "EM101", #  empty except clause
 
       "D104", # Missing docstring in public package
       "D105", # undocumented-magic-method
@@ -63,6 +64,7 @@ ignore = [
       "SLF001", # private-member-access
 
       "TRY002", # raise-vanilla-class
+      "TRY003", # unnecessary-except-type
       "TC004",  # runtime-import-in-type-checking-block
 ]
 
