@@ -40,23 +40,23 @@ class FormatterPayload:
 
     def get(
         self: Self,
-        key: str,
-        default: object = None,
-    ) -> typing.Any:  # noqa: ANN401
+        key: typing.Any,
+        default: typing.Any = None,
+    ) -> typing.Any:
         """Retrieve one of the defined fields from the dictionnary."""
         return getattr(self, key, default)
 
     def __getitem__(
         self: Self,
-        key: str,
-    ) -> typing.Any:  # noqa: ANN401
+        key: typing.Any,
+    ) -> typing.Any:
         """Enable dataclass to be subscriptable."""
         return getattr(self, key, None)
 
     def __setitem__(
         self: Self,
-        key: str,
-        value: object = None,
+        key: typing.Any,
+        value: typing.Any = None,
     ) -> None:
         """Enable dataclass to be subscriptable."""
         setattr(self, key, value)

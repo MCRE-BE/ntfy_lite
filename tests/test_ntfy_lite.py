@@ -537,7 +537,7 @@ def test_handler_emit_error_path(monkeypatch: pytest.MonkeyPatch, caplog: pytest
     """Test that NtfyHandler.emit handles exceptions correctly."""
 
     def mock_push(*args, **kwargs):
-        raise ValueError("Simulated push error")  # noqa: TRY003 EM101
+        raise ValueError("Simulated push error")
 
     monkeypatch.setattr(ntfy.handler, "push", mock_push)
 
@@ -618,7 +618,7 @@ def test_buffer_429_file_data():
 def test_buffer_429_file_read_error():
     class BrokenFile:
         def read(self, *args, **kwargs):
-            raise OSError("Read failed")  # noqa: TRY003 EM101
+            raise OSError("Read failed")
 
         def seek(self, *args, **kwargs):
             pass
