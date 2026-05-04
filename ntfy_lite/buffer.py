@@ -45,7 +45,6 @@ class NtfyBuffer:
         self: Self,
         db_path: Path,
         max_file_size: int = 5 * 1024 * 1024,
-        max_buffer_size: int = 1000,
     ) -> None:
         """Start the buffer, setting up its SQLite path.
 
@@ -58,13 +57,9 @@ class NtfyBuffer:
         max_file_size : int, optional
             The maximum number of bytes to read from file attachments when buffering
             to prevent memory exhaustion. Defaults to 5MB.
-        max_buffer_size : int, optional
-            The maximum number of rows to store in the buffer to prevent unbounded
-            disk space consumption. Defaults to 1000.
         """
         self.db_path = Path(db_path)
         self.max_file_size = max_file_size
-        self.max_buffer_size = max_buffer_size
         self._flusher_lock = threading.Lock()
         self._flusher_state = {"running": False}
         self._init_db()
@@ -89,7 +84,7 @@ class NtfyBuffer:
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 """)
-        except Exception:
+        except (OSError, sqlite3.Error, Exception):
             logging.exception("Failed to initialize ntfy SQLite buffer")
 
     def add(
@@ -111,17 +106,8 @@ class NtfyBuffer:
                     "INSERT INTO buffer (topic, url, headers, data) VALUES (?, ?, ?, ?)",
                     (topic, url, json.dumps(headers), data),
                 )
-                # Enforce buffer limit by deleting oldest records
-                conn.execute(
-                    """
-                    DELETE FROM buffer WHERE id NOT IN (
-                        SELECT id FROM buffer ORDER BY created_at DESC, id DESC LIMIT ?
-                    )
-                    """,
-                    (self.max_buffer_size,),
-                )
             self._trigger_buffer_flush()
-        except Exception:
+        except (sqlite3.Error, Exception):
             logging.exception("Failed to buffer NTFY message")
 
     def _flush_buffer_thread(self: Self) -> None:
@@ -162,7 +148,7 @@ class NtfyBuffer:
                             f"NTFY async retry failed: {response.reason}. Discarding buffered message id {row_id}."
                         )
                         to_delete.append((row_id,))
-                except Exception:
+                except (requests.RequestException, json.JSONDecodeError, Exception):
                     logging.exception("NTFY async flusher exception.")
                     break  # Wait for next import to retry
 
@@ -170,9 +156,9 @@ class NtfyBuffer:
                 try:
                     with sqlite3.connect(str(self.db_path), timeout=10) as conn:
                         conn.executemany("DELETE FROM buffer WHERE id = ?", to_delete)
-                except Exception:
+                except (sqlite3.Error, Exception):
                     logging.exception("Failed to batch delete buffered messages.")
-        except Exception:
+        except (sqlite3.Error, Exception):
             logging.exception("NTFY async flusher final exception fallback")
         finally:
             with self._flusher_lock:
