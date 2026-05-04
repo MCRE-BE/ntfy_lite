@@ -70,6 +70,7 @@ class NtfyHandler(logging.Handler):
         level2filepath: dict[int, Path] | None = None,
         level2email: dict[int, str] | None = None,
         db_path: Path | str | bool | None = None,
+        max_buffer_size: int = 1000,
         formatter: Formatter | None = None,
     ):
         """Start.
@@ -94,6 +95,9 @@ class NtfyHandler(logging.Handler):
             If an email address is specified for the logging level of the record, the ntfy notification will also request a mail to be sent.
         db_path : Path | str | bool | None, optional
             Database path for the buffer.
+        max_buffer_size : int, optional
+            The maximum number of rows to store in the buffer to prevent unbounded
+            disk space consumption. Defaults to 1000.
         formatter : Formatter | None, optional
             Formatter for payloads.
         """
@@ -130,7 +134,7 @@ class NtfyHandler(logging.Handler):
             if _HAS_BUFFER:
                 with contextlib.suppress(Exception):
                     db_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-                self._buffer = NtfyBuffer(db_path)
+                self._buffer = NtfyBuffer(db_path, max_buffer_size=max_buffer_size)
             else:
                 msg = (
                     "Buffering requested (db_path provided or default) but 'pysqlite3' or 'sqlite3' is not available. "
