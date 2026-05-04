@@ -45,7 +45,8 @@ try:
 except ImportError:
     _HAS_BUFFER = False
 
-from .config import Priority, level2priority, level2tags
+from .config import Priority, level2tags
+from .config import level2priority as default_level2priority
 from .error import NtfyError
 from .formatter import Formatter
 from .ntfy import push
@@ -69,7 +70,7 @@ class NtfyHandler(logging.Handler):
         twice_in_a_row: bool = True,
         error_callback: typing.Callable[[Exception], typing.Any] | None = None,
         level2tags: dict[int, tuple[str, ...]] = level2tags,
-        level2priority: dict[int, Priority] = level2priority,
+        level2priority: dict[int, Priority] = default_level2priority,
         level2filepath: dict[int, Path] | None = None,
         level2email: dict[int, str] | None = None,
         db_path: Path | str | bool | None = None,
@@ -144,7 +145,7 @@ class NtfyHandler(logging.Handler):
                 logging.info(msg)
 
         # ... Check logging level's
-        for logging_level in level2priority:
+        for logging_level in default_level2priority:
             if logging_level not in self._level2priority:
                 raise ValueError(
                     f"NtfyHandler, level2priority argument: missing mapping from "

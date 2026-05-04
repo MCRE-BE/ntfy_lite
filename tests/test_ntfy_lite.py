@@ -14,6 +14,7 @@ import pytest
 
 import ntfy_lite as ntfy
 from ntfy_lite.buffer import NtfyBuffer
+from ntfy_lite.ntfy import _buffer_429
 
 
 ############
@@ -401,6 +402,20 @@ def test_handler_disable_db_path_env(monkeypatch: pytest.MonkeyPatch):
     assert handler._buffer is None
 
 
+def test_handler_missing_level2priority_mapping(monkeypatch: pytest.MonkeyPatch):
+    """Test that NtfyHandler raises ValueError when missing a default level mapping."""
+    monkeypatch.delenv("NTFY_LITE_DISABLE_BUFFER", raising=False)
+
+    # Create a custom mapping missing a required level mapping
+    from ntfy_lite.config import level2priority
+
+    custom = level2priority.copy()
+    del custom[logging.INFO]
+
+    with pytest.raises(ValueError, match="missing mapping from logging level 20 to ntfy priority level"):
+        ntfy.NtfyHandler("test_topic", twice_in_a_row=False, level2priority=custom)
+
+
 def test_long_message_truncation_no_attachment(
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -555,3 +570,88 @@ def test_handler_emit_error_path(monkeypatch: pytest.MonkeyPatch, caplog: pytest
     assert str(caught_exception) == "Simulated push error"
     assert handle_error_called
     assert "NTFY Log Handler failed" in caplog.text
+
+
+# --- _buffer_429 tests ---
+def test_buffer_429_no_buffer():
+    assert _buffer_429("test", "http://test", "data", {}, None) is False
+
+
+def test_buffer_429_string_data():
+    class MockBuffer:
+        def __init__(self):
+            self.added = False
+            self.data = None
+
+        def add(self, topic, url, data_to_store, headers):
+            _ = (topic, url, headers)
+            self.added = True
+            self.data = data_to_store
+
+    buf = MockBuffer()
+    assert _buffer_429("test", "http://test", "string_data", {}, buf) is True
+    assert buf.added
+    assert buf.data == "string_data"
+
+
+def test_buffer_429_file_data():
+    import io
+
+    class MockBuffer:
+        def __init__(self):
+            self.added = False
+            self.data = None
+            self.max_file_size = 5
+
+        def add(self, topic, url, data_to_store, headers):
+            _ = (topic, url, headers)
+            self.added = True
+            self.data = data_to_store
+
+    buf = MockBuffer()
+    file_data = io.BytesIO(b"1234567890")
+    assert _buffer_429("test", "http://test", file_data, {}, buf) is True
+    assert buf.added
+    assert buf.data == b"12345"
+
+
+def test_buffer_429_file_read_error():
+    class BrokenFile:
+        def read(self, *args, **kwargs):
+            raise OSError("Read failed")
+
+        def seek(self, *args, **kwargs):
+            pass
+
+    class MockBuffer:
+        def __init__(self):
+            self.added = False
+            self.data = None
+
+        def add(self, topic, url, data_to_store, headers):
+            _ = (topic, url, headers)
+            self.added = True
+            self.data = data_to_store
+
+    buf = MockBuffer()
+    broken_file = BrokenFile()
+    assert _buffer_429("test", "http://test", typing.cast("typing.IO[typing.Any]", broken_file), {}, buf) is True
+    assert buf.added
+    assert buf.data == "Original file attachment was not buffered due to HTTP 429 and could not be read."
+
+
+def test_buffer_429_other_data():
+    class MockBuffer:
+        def __init__(self):
+            self.added = False
+            self.data = None
+
+        def add(self, topic, url, data_to_store, headers):
+            _ = (topic, url, headers)
+            self.added = True
+            self.data = data_to_store
+
+    buf = MockBuffer()
+    assert _buffer_429("test", "http://test", typing.cast("typing.IO[typing.Any]", 12345), {}, buf) is True
+    assert buf.added
+    assert buf.data == ""
