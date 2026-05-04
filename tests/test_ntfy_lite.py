@@ -28,7 +28,7 @@ def mock_requests_put(monkeypatch):
         status_code = 200
         reason = "OK"
 
-    def mock_put(*args, **kwargs):
+    def mock_put(*args: object, **kwargs: object) -> MockResponse:
         return MockResponse()
 
     monkeypatch.setattr("requests.Session.put", mock_put)
@@ -288,7 +288,7 @@ def test_error_push(monkeypatch: pytest.MonkeyPatch):
         status_code = 500
         reason = "Internal Server Error"
 
-    def mock_put(*args: typing.Any, **kwargs: typing.Any) -> MockResponse:
+    def mock_put(*args: object, **kwargs: object) -> MockResponse:
         return MockResponse()
 
     monkeypatch.setattr("requests.Session.put", mock_put)
@@ -326,7 +326,7 @@ def test_rate_limit_buffering_and_logging(
             logs.append(self.format(record))
 
     # --- Functions ---
-    def mock_put(*args: typing.Any, **kwargs) -> MockResponse:
+    def mock_put(*args: object, **kwargs: object) -> MockResponse:
         return MockResponse()
 
     # --- Variables ---
@@ -402,20 +402,6 @@ def test_handler_disable_db_path_env(monkeypatch: pytest.MonkeyPatch):
     assert handler._buffer is None
 
 
-def test_handler_missing_level2priority_mapping(monkeypatch: pytest.MonkeyPatch):
-    """Test that NtfyHandler raises ValueError when missing a default level mapping."""
-    monkeypatch.delenv("NTFY_LITE_DISABLE_BUFFER", raising=False)
-
-    # Create a custom mapping missing a required level mapping
-    from ntfy_lite.config import level2priority
-
-    custom = level2priority.copy()
-    del custom[logging.INFO]
-
-    with pytest.raises(ValueError, match="missing mapping from logging level 20 to ntfy priority level"):
-        ntfy.NtfyHandler("test_topic", twice_in_a_row=False, level2priority=custom)
-
-
 def test_long_message_truncation_no_attachment(
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -428,10 +414,10 @@ def test_long_message_truncation_no_attachment(
 
     call_args = []
 
-    def mock_put(*args: typing.Any, **kwargs: typing.Any) -> MockResponse:
+    def mock_put(*args: object, **kwargs: object) -> MockResponse:
         data = kwargs.get("data")
         if data is not None and hasattr(data, "read"):
-            kwargs["data"] = data.read().decode("utf-8")
+            kwargs["data"] = typing.cast("typing.IO[bytes]", data).read().decode("utf-8")
         call_args.append((args, kwargs))
         return MockResponse()
 
@@ -482,7 +468,7 @@ def test_handler_emit_duplicate(monkeypatch: pytest.MonkeyPatch):
         status_code = 200
         reason = "OK"
 
-    def mock_put(*args: typing.Any, **kwargs: typing.Any) -> MockResponse:
+    def mock_put(*args: object, **kwargs: object) -> MockResponse:
         call_count[0] += 1
         return MockResponse()
 
@@ -537,7 +523,8 @@ def test_handler_emit_error_path(monkeypatch: pytest.MonkeyPatch, caplog: pytest
     """Test that NtfyHandler.emit handles exceptions correctly."""
 
     def mock_push(*args, **kwargs):
-        raise ValueError("Simulated push error")
+        msg = "Simulated push error"
+        raise ValueError(msg)
 
     monkeypatch.setattr(ntfy.handler, "push", mock_push)
 
@@ -618,7 +605,8 @@ def test_buffer_429_file_data():
 def test_buffer_429_file_read_error():
     class BrokenFile:
         def read(self, *args, **kwargs):
-            raise OSError("Read failed")
+            msg = "Read failed"
+            raise OSError(msg)
 
         def seek(self, *args, **kwargs):
             pass

@@ -48,8 +48,9 @@ class Action(abc.ABC):
         action: str,
         label: str,
         url: str,
+        *,
         clear: bool = False,
-    ):
+    ) -> None:
         validate_url("Action.url", url)
 
         self.action = action
@@ -95,9 +96,10 @@ class ViewAction(Action):
         self: Self,
         label: str,
         url: str,
+        *,
         clear: bool = False,
     ) -> None:
-        super().__init__("view", label, url, clear)
+        super().__init__("view", label, url, clear=clear)
 
     def __str__(self: Self) -> str:
         _attrs = ("label", "url", "clear")
@@ -144,12 +146,13 @@ class HttpAction(Action):
         self: Self,
         label: str,
         url: str,
+        *,
         clear: bool = False,
         method: HttpMethod = HttpMethod.GET,
         headers: typing.Mapping[str, str] | None = None,
         body: str | None = None,
-    ):
-        super().__init__("http", label, url, clear)
+    ) -> None:
+        super().__init__("http", label, url, clear=clear)
         self.method = method.value
         self.headers = headers
         self.body = body

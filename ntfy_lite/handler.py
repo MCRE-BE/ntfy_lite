@@ -32,8 +32,6 @@ import typing
 import warnings
 from pathlib import Path
 
-import requests
-
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -45,9 +43,7 @@ try:
 except ImportError:
     _HAS_BUFFER = False
 
-from .config import Priority, level2tags
-from .config import level2priority as default_level2priority
-from .error import NtfyError
+from .config import Priority, level2priority, level2tags
 from .formatter import Formatter
 from .ntfy import push
 
@@ -67,16 +63,16 @@ class NtfyHandler(logging.Handler):
         self: Self,
         topic: str,
         url: str = "https://ntfy.sh",
+        *,
         twice_in_a_row: bool = True,
         error_callback: typing.Callable[[Exception], typing.Any] | None = None,
         level2tags: dict[int, tuple[str, ...]] = level2tags,
-        level2priority: dict[int, Priority] = default_level2priority,
+        level2priority: dict[int, Priority] = level2priority,
         level2filepath: dict[int, Path] | None = None,
         level2email: dict[int, str] | None = None,
         db_path: Path | str | bool | None = None,
-        max_buffer_size: int = 1000,
         formatter: Formatter | None = None,
-    ):
+    ) -> None:
         """Start.
 
         Parameters
@@ -99,9 +95,6 @@ class NtfyHandler(logging.Handler):
             If an email address is specified for the logging level of the record, the ntfy notification will also request a mail to be sent.
         db_path : Path | str | bool | None, optional
             Database path for the buffer.
-        max_buffer_size : int, optional
-            The maximum number of rows to store in the buffer to prevent unbounded
-            disk space consumption. Defaults to 1000.
         formatter : Formatter | None, optional
             Formatter for payloads.
         """
@@ -138,7 +131,7 @@ class NtfyHandler(logging.Handler):
             if _HAS_BUFFER:
                 with contextlib.suppress(Exception):
                     db_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-                self._buffer = NtfyBuffer(db_path, max_buffer_size=max_buffer_size)
+                self._buffer = NtfyBuffer(db_path)
             else:
                 msg = (
                     "Buffering requested (db_path provided or default) but 'pysqlite3' or 'sqlite3' is not available. "
@@ -149,11 +142,14 @@ class NtfyHandler(logging.Handler):
                 logging.info(msg)
 
         # ... Check logging level's
-        for logging_level in default_level2priority:
+        for logging_level in level2priority:
             if logging_level not in self._level2priority:
-                raise ValueError(
+                msg_0 = (
                     f"NtfyHandler, level2priority argument: missing mapping from "
-                    f"logging level {logging_level} to ntfy priority level",
+                    f"logging level {logging_level} to ntfy priority level"
+                )
+                raise ValueError(
+                    msg_0,
                 )
 
     def _is_new_record(self, record: logging.LogRecord) -> bool:
@@ -182,7 +178,7 @@ class NtfyHandler(logging.Handler):
                     typing.cast(
                         "dict[str, typing.Any]",
                         record.extra,
-                    )["logger_name"]
+                    )["logger_name"],
                 )
             push(
                 topic=self._topic,
@@ -196,7 +192,7 @@ class NtfyHandler(logging.Handler):
                 buffer=self._buffer,
                 formatter=self._formatter,
             )
-        except (NtfyError, requests.RequestException, ValueError, OSError) as e:
+        except Exception as e:
             logging.exception("NTFY Log Handler failed")
             if self._error_callback is not None:
                 self._error_callback(e)
