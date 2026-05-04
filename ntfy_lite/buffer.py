@@ -115,8 +115,8 @@ class NtfyBuffer:
 
         This routine:
         1. Selects all rows currently stranded in the buffer ordered by creation date.
-        2. Sleeps for 60 seconds linearly per loop to respect standard rate-limiting.
-        3. Attempts an HTTP PUT. If it's a 429, it breaks the loop (it will try again
+        2. Attempts an HTTP PUT.
+        3. If it's a 429, it sleeps for 60 seconds and breaks the loop (it will try again
            next pipeline run).
         4. Successes and untrappable HTTP failure codes will delete the row permanently
            to ensure no infinite looping records.
@@ -130,8 +130,6 @@ class NtfyBuffer:
             to_delete = []
 
             for row_id, topic, url, headers_json, data in rows:
-                # Sleep 60 seconds between retries to respect the ntfy rate limit interval
-                time.sleep(60)
                 try:
                     headers = json.loads(headers_json)
 
@@ -141,6 +139,7 @@ class NtfyBuffer:
                     elif int(response.status_code) == 429:
                         # Still rate limited; stop flushing so we don't spam the server further
                         logging.warning("NTFY buffer fast retry rate limited (HTTP 429). Will stop flusher.")
+                        time.sleep(60)
                         break
                     else:
                         # Some other failure, discard the buffered message and log the trace
