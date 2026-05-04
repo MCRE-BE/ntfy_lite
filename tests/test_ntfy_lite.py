@@ -7,12 +7,14 @@
 import logging
 import sqlite3
 import tempfile
+import typing
 from pathlib import Path
 
 import pytest
 
 import ntfy_lite as ntfy
 from ntfy_lite.buffer import NtfyBuffer
+from ntfy_lite.ntfy import _buffer_429
 
 
 ############
@@ -400,6 +402,20 @@ def test_handler_disable_db_path_env(monkeypatch: pytest.MonkeyPatch):
     assert handler._buffer is None
 
 
+def test_handler_missing_level2priority_mapping(monkeypatch: pytest.MonkeyPatch):
+    """Test that NtfyHandler raises ValueError when missing a default level mapping."""
+    monkeypatch.delenv("NTFY_LITE_DISABLE_BUFFER", raising=False)
+
+    # Create a custom mapping missing a required level mapping
+    from ntfy_lite.config import level2priority
+
+    custom = level2priority.copy()
+    del custom[logging.INFO]
+
+    with pytest.raises(ValueError, match="missing mapping from logging level 20 to ntfy priority level"):
+        ntfy.NtfyHandler("test_topic", twice_in_a_row=False, level2priority=custom)
+
+
 def test_long_message_truncation_no_attachment(
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -456,3 +472,204 @@ def test_data_manager_invalid_filepath(tmp_path: Path):
     non_existent_file = tmp_path / "does_not_exist.txt"
     with pytest.raises(FileNotFoundError, match="failed to find file to attach"):
         _DataManager(message=None, filepath=non_existent_file)
+
+
+def test_handler_emit_duplicate(monkeypatch: pytest.MonkeyPatch):
+    call_count = [0]
+
+    class MockResponse:
+        ok = True
+        status_code = 200
+        reason = "OK"
+
+    def mock_put(*args: typing.Any, **kwargs: typing.Any) -> MockResponse:
+        call_count[0] += 1
+        return MockResponse()
+
+    monkeypatch.setattr("requests.Session.put", mock_put)
+
+    handler = ntfy.NtfyHandler("test_topic", twice_in_a_row=False)
+    record = logging.LogRecord("test.logger", logging.INFO, "", -1, "Test duplicate", None, None)
+
+    # First emit should call push
+    handler.emit(record)
+    assert call_count[0] == 1
+
+    # Second emit with same record should not call push
+    handler.emit(record)
+    assert call_count[0] == 1
+
+    # Third emit with different message should call push
+    record_diff = logging.LogRecord("test.logger", logging.INFO, "", -1, "Test diff", None, None)
+    handler.emit(record_diff)
+    assert call_count[0] == 2
+
+
+def test_handler_is_new_record():
+    handler = ntfy.NtfyHandler("test_topic", twice_in_a_row=False)
+    assert handler._last_messages == {}
+
+    # Create log records
+    record1 = logging.LogRecord("test.logger", logging.INFO, "", -1, "Test message 1", None, None)
+    record1_dup = logging.LogRecord("test.logger", logging.INFO, "", -1, "Test message 1", None, None)
+    record2 = logging.LogRecord("test.logger", logging.INFO, "", -1, "Test message 2", None, None)
+    record3 = logging.LogRecord("other.logger", logging.INFO, "", -1, "Test message 1", None, None)
+
+    # Initially record1 is new
+    assert handler._is_new_record(record1) is True
+    # Now it shouldn't be new
+    assert handler._is_new_record(record1_dup) is False
+    # A new message for same logger is new
+    assert handler._is_new_record(record2) is True
+    # Now it shouldn't be new
+    assert handler._is_new_record(record2) is False
+    # Same message but for different logger is new
+    assert handler._is_new_record(record3) is True
+
+    # Test when twice_in_a_row is True (so _last_messages is None)
+    handler2 = ntfy.NtfyHandler("test_topic", twice_in_a_row=True)
+    assert handler2._last_messages is None
+    assert handler2._is_new_record(record1) is True
+    assert handler2._is_new_record(record1_dup) is True
+
+
+def test_handler_emit_error_path(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture):
+    """Test that NtfyHandler.emit handles exceptions correctly."""
+
+    def mock_push(*args, **kwargs):
+        raise ValueError("Simulated push error")  # noqa: TRY003 EM101
+
+    monkeypatch.setattr(ntfy.handler, "push", mock_push)
+
+    error_callback_called = False
+    caught_exception = None
+
+    def mock_error_callback(e: Exception):
+        nonlocal error_callback_called
+        nonlocal caught_exception
+        error_callback_called = True
+        caught_exception = e
+
+    handler = ntfy.NtfyHandler("test_topic", error_callback=mock_error_callback)
+
+    handle_error_called = False
+
+    def mock_handle_error(record):
+        nonlocal handle_error_called
+        handle_error_called = True
+
+    monkeypatch.setattr(handler, "handleError", mock_handle_error)
+
+    record = logging.LogRecord("test_logger", logging.INFO, "", -1, "test message", None, None)
+
+    with caplog.at_level(logging.ERROR):
+        handler.emit(record)
+
+    assert error_callback_called
+    assert isinstance(caught_exception, ValueError)
+    assert str(caught_exception) == "Simulated push error"
+    assert handle_error_called
+    assert "NTFY Log Handler failed" in caplog.text
+
+
+# --- _buffer_429 tests ---
+def test_buffer_429_no_buffer():
+    assert _buffer_429("test", "http://test", "data", {}, None) is False
+
+
+def test_buffer_429_string_data():
+    class MockBuffer:
+        def __init__(self):
+            self.added = False
+            self.data = None
+
+        def add(self, topic, url, data_to_store, headers):
+            _ = (topic, url, headers)
+            self.added = True
+            self.data = data_to_store
+
+    buf = MockBuffer()
+    assert _buffer_429("test", "http://test", "string_data", {}, buf) is True
+    assert buf.added
+    assert buf.data == "string_data"
+
+
+def test_buffer_429_file_data():
+    import io
+
+    class MockBuffer:
+        def __init__(self):
+            self.added = False
+            self.data = None
+            self.max_file_size = 5
+
+        def add(self, topic, url, data_to_store, headers):
+            _ = (topic, url, headers)
+            self.added = True
+            self.data = data_to_store
+
+    buf = MockBuffer()
+    file_data = io.BytesIO(b"1234567890")
+    assert _buffer_429("test", "http://test", file_data, {}, buf) is True
+    assert buf.added
+    assert buf.data == b"12345"
+
+
+def test_buffer_429_file_read_error():
+    class BrokenFile:
+        def read(self, *args, **kwargs):
+            raise OSError("Read failed")  # noqa: TRY003 EM101
+
+        def seek(self, *args, **kwargs):
+            pass
+
+    class MockBuffer:
+        def __init__(self):
+            self.added = False
+            self.data = None
+
+        def add(self, topic, url, data_to_store, headers):
+            _ = (topic, url, headers)
+            self.added = True
+            self.data = data_to_store
+
+    buf = MockBuffer()
+    broken_file = BrokenFile()
+    assert (
+        _buffer_429(
+            "test",
+            "http://test",
+            typing.cast("typing.IO[typing.Any]", broken_file),
+            {},
+            buf,
+        )
+        is True
+    )
+    assert buf.added
+    assert buf.data == "Original file attachment was not buffered due to HTTP 429 and could not be read."
+
+
+def test_buffer_429_other_data():
+    class MockBuffer:
+        def __init__(self):
+            self.added = False
+            self.data = None
+
+        def add(self, topic, url, data_to_store, headers):
+            _ = (topic, url, headers)
+            self.added = True
+            self.data = data_to_store
+
+    buf = MockBuffer()
+    assert (
+        _buffer_429(
+            "test",
+            "http://test",
+            typing.cast("typing.IO[typing.Any]", 12345),
+            {},
+            buf,
+        )
+        is True
+    )
+    assert buf.added
+    assert buf.data == ""
