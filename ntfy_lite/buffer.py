@@ -84,7 +84,7 @@ class NtfyBuffer:
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 """)
-        except Exception:
+        except (OSError, sqlite3.Error):
             logging.exception("Failed to initialize ntfy SQLite buffer")
 
     def add(
@@ -107,7 +107,7 @@ class NtfyBuffer:
                     (topic, url, json.dumps(headers), data),
                 )
             self._trigger_buffer_flush()
-        except Exception:
+        except sqlite3.Error:
             logging.exception("Failed to buffer NTFY message")
 
     def _flush_buffer_thread(self: Self) -> None:
@@ -148,7 +148,7 @@ class NtfyBuffer:
                             f"NTFY async retry failed: {response.reason}. Discarding buffered message id {row_id}."
                         )
                         to_delete.append((row_id,))
-                except Exception:
+                except (requests.RequestException, json.JSONDecodeError):
                     logging.exception("NTFY async flusher exception.")
                     break  # Wait for next import to retry
 
@@ -156,9 +156,9 @@ class NtfyBuffer:
                 try:
                     with sqlite3.connect(str(self.db_path), timeout=10) as conn:
                         conn.executemany("DELETE FROM buffer WHERE id = ?", to_delete)
-                except Exception:
+                except sqlite3.Error:
                     logging.exception("Failed to batch delete buffered messages.")
-        except Exception:
+        except sqlite3.Error:
             logging.exception("NTFY async flusher final exception fallback")
         finally:
             with self._flusher_lock:
