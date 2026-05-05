@@ -1,6 +1,9 @@
 import logging
 import sqlite3
+import time
+import uuid
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
@@ -44,3 +47,55 @@ def test_ntfy_buffer_add_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, 
         buffer.add("topic", "url", "data", {})
 
     assert "Failed to buffer NTFY message" in caplog.text
+
+
+def test_ntfy_buffer_flush_no_429(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+):
+
+    db_path = tmp_path / "test_buffer_flush_429_integration.sqlite"
+
+    # Patch Thread.start to prevent flusher from auto-running on init/add
+    # so we can control exactly when it starts
+    with mock.patch("threading.Thread.start"):
+        buffer = NtfyBuffer(db_path)
+        topic = f"test_ntfy_flush_{uuid.uuid4().hex}"
+        url = "https://ntfy.sh"
+
+        # Add multiple messages
+        buffer.add(topic, url, "data1", {})
+        buffer.add(topic, url, "data2", {})
+        buffer.add(topic, url, "data3", {})
+        buffer.add(topic, url, "data4", {})
+        buffer.add(topic, url, "data5", {})
+        buffer.add(topic, url, "data6", {})
+
+    # Clear the caplog before starting the flush
+    caplog.clear()
+
+    # Ensure running is False so _trigger_buffer_flush actually starts a thread
+    # (The __init__ call set it to True but the mock prevented the thread from starting)
+    buffer._flusher_state["running"] = False
+
+    # Now we start the REAL background thread to verify it works with real ntfy.sh
+    buffer._trigger_buffer_flush()
+
+    # Wait for the background thread to finish
+    # It will take ~4-5 seconds normally, but 60s if it hits a 429
+    timeout = 80
+    start_time = time.time()
+    while buffer._flusher_state["running"] and time.time() - start_time < timeout:
+        time.sleep(1)
+
+    assert not buffer._flusher_state["running"], "Integration flusher thread did not finish in time"
+
+    # Check that no 429 warning was logged
+    assert "NTFY buffer fast retry rate limited" not in caplog.text
+
+    # Check that DB is empty, meaning all messages successfully flushed
+    with sqlite3.connect(str(db_path)) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM buffer")
+        rows = cursor.fetchall()
+        assert len(rows) == 0
