@@ -65,13 +65,32 @@ class Action(abc.ABC):
     def __str__(self: Self) -> str:
         """Format the action as a string."""
 
+    @staticmethod
+    def _quote(value: str) -> str:
+        """Quote a string if it contains special characters.
+
+        Parameters
+        ----------
+        value : str
+            the string to quote.
+
+        Returns
+        -------
+        str
+            the quoted string.
+        """
+        if any(c in value for c in (",", ";", '"')):
+            escaped = value.replace('"', '\\"')
+            return f'"{escaped}"'
+        return value
+
     def _str(
         self: Self,
         attrs: tuple[str, ...],
     ) -> str:
         return ", ".join((
             self.action,
-            *(f"{attr}={val}" for attr in attrs if (val := getattr(self, attr)) is not None),
+            *(f"{attr}={self._quote(str(val))}" for attr in attrs if (val := getattr(self, attr)) is not None),
         ))
 
 
@@ -162,5 +181,7 @@ class HttpAction(Action):
         main = self._str(_attrs)
         if not self.headers:
             return main
-        headers_str = ", ".join(f"headers.{key}={value}" for key, value in self.headers.items())
+        headers_str = ", ".join(
+            f"headers.{self._quote(key)}={self._quote(value)}" for key, value in self.headers.items()
+        )
         return f"{main}, {headers_str}"
