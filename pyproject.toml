@@ -55,7 +55,9 @@ urlsDocumentation = "https://mcre-be.github.io/ntfy_lite/"
 
 [dependency-groups]
 dev = [
+  "coverage>=7.13.5",
   "ntfy-lite[buffer,dev,docs,test]",
+  "responses>=0.26",
 ]
 
 ## #####
@@ -71,6 +73,10 @@ environment.python = "./.venv"
 rules.invalid-argument-type = "warn"
 rules.possibly-unresolved-reference = "warn"
 rules.unresolved-import = "error"
+
+[tool.coverage]
+run.relative_files = true
+run.source = [ "ntfy_lite" ]
 
 [tool.commitizen]
 name = "cz_conventional_commits"
