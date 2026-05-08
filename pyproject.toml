@@ -34,8 +34,10 @@ optional-dependencies.buffer = [
   "pysqlite3",
 ]
 optional-dependencies.dev = [
+  "coverage>=7.13.5",
   "ntfy-lite[buffer,docs,test]",
   "prek",
+  "responses>=0.26",
   "ruff>0",
   "ty>0",
   "zensical",
@@ -55,9 +57,7 @@ urlsDocumentation = "https://mcre-be.github.io/ntfy_lite/"
 
 [dependency-groups]
 dev = [
-  "coverage>=7.13.5",
   "ntfy-lite[buffer,dev,docs,test]",
-  "responses>=0.26",
 ]
 
 ## #####
