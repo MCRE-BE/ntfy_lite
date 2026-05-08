@@ -142,7 +142,9 @@ class NtfyHandler(logging.Handler):
                 logging.info(msg)
 
         # ... Check logging level's
-        for logging_level in level2priority:
+        from .config import level2priority as default_level2priority
+
+        for logging_level in default_level2priority:
             if logging_level not in self._level2priority:
                 msg_0 = (
                     f"NtfyHandler, level2priority argument: missing mapping from "
