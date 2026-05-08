@@ -19,6 +19,7 @@
 - Find the CI plan in the .github/workflows folder.
 - Fix any test or type errors until the whole suite is green.
 - Add or update tests for the code you change, even if nobody asked.
+- **Coverage**: Maintain 100% test coverage. Every new feature or fix must be accompanied by tests that ensure full branch coverage. Combined coverage across all supported Python versions (3.10+) must reach 100% in CI/CD.
 
 ## PR instructions
 - Use **Conventional Commits** in commits and PR's. This means to format them as <type>[optional scope]: <description>
