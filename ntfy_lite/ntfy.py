@@ -19,12 +19,12 @@ import requests
 
 if sys.version_info >= (3, 11):
     from typing import Self
-else:
+else:  # pragma: no cover
     from typing_extensions import Self
 
 try:
     from .buffer import NtfyBuffer
-except ImportError:
+except ImportError:  # pragma: no cover
     NtfyBuffer: typing.TypeAlias = typing.Any
 
 from .actions import Action
@@ -103,11 +103,11 @@ class _DataManager:
                 formatter = TruncationFormatter()
 
             fmt_result = formatter.process(message_str) if message_str is not None else formatter._default_payload()
-            self._payload.data = fmt_result.get("data", "")
-            self._payload.message_header = fmt_result.get("message_header")
-            self._payload.filename_header = fmt_result.get("filename_header")
-            self._file_to_close = fmt_result.get("file_to_close")
-            self._temp_file_path = fmt_result.get("temp_file_path")
+            self._payload.data = fmt_result.data
+            self._payload.message_header = fmt_result.message_header
+            self._payload.filename_header = fmt_result.filename_header
+            self._file_to_close = fmt_result.file_to_close
+            self._temp_file_path = fmt_result.temp_file_path
 
     def __enter__(self: Self) -> _DataPayload:
         return self._payload
@@ -130,7 +130,7 @@ def _buffer_429(
     topic: str,
     url: str | None,
     data: typing.IO[typing.Any] | str,
-    headers: dict[str, str],
+    headers: typing.Mapping[str, str],
     buffer: typing.Any | None,  # noqa: ANN401
 ) -> bool:
     """Helper to handle HTTP 429 buffering logic.
@@ -214,13 +214,13 @@ def _execute_push(
     topic: str,
     url: str,
     payload_data: typing.IO[typing.Any] | str,
-    headers: dict[str, str],
+    headers: typing.Mapping[str, str],
     buffer: typing.Any | None,  # noqa: ANN401
 ) -> None:
     response = _session.put(
         f"{url}/{topic}",
         data=payload_data,
-        headers=headers,
+        headers=typing.cast("typing.MutableMapping[str, str | bytes] | None", headers),
         timeout=10,
     )
     if not response.ok:

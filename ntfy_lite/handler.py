@@ -34,14 +34,15 @@ from pathlib import Path
 
 if sys.version_info >= (3, 11):
     from typing import Self
-else:
+else:  # pragma: no cover
     from typing_extensions import Self
 try:
     from .buffer import NtfyBuffer
 
     _HAS_BUFFER = True
-except ImportError:
+except ImportError:  # pragma: no cover
     _HAS_BUFFER = False
+    NtfyBuffer: typing.Any = typing.Any  # type: ignore[assignment, misc]
 
 from .config import Priority, level2priority, level2tags
 from .config import level2priority as default_level2priority
@@ -67,10 +68,10 @@ class NtfyHandler(logging.Handler):
         *,
         twice_in_a_row: bool = True,
         error_callback: typing.Callable[[Exception], typing.Any] | None = None,
-        level2tags: dict[int, tuple[str, ...]] = level2tags,
-        level2priority: dict[int, Priority] = level2priority,
-        level2filepath: dict[int, Path] | None = None,
-        level2email: dict[int, str] | None = None,
+        level2tags: typing.Mapping[int, typing.Sequence[str]] = level2tags,
+        level2priority: typing.Mapping[int, Priority] = level2priority,
+        level2filepath: typing.Mapping[int, Path] | None = None,
+        level2email: typing.Mapping[int, str] | None = None,
         db_path: Path | str | bool | None = None,
         formatter: Formatter | None = None,
     ) -> None:
@@ -110,10 +111,10 @@ class NtfyHandler(logging.Handler):
         self._topic: str = topic
         self._last_messages: dict[str, str] | None
         self._last_messages = None if twice_in_a_row else {}
-        self._level2tags: dict[int, tuple[str, ...]] = level2tags
-        self._level2priority: dict[int, Priority] = level2priority
-        self._level2filepath: dict[int, Path] | dict[typing.Any, typing.Any] = level2filepath
-        self._level2email: dict[int, str] | dict[typing.Any, typing.Any] = level2email
+        self._level2tags: typing.Mapping[int, typing.Sequence[str]] = level2tags
+        self._level2priority: typing.Mapping[int, Priority] = level2priority
+        self._level2filepath: typing.Mapping[int, Path] = level2filepath
+        self._level2email: typing.Mapping[int, str] = level2email
         self._error_callback: typing.Callable[[Exception], typing.Any] | None = error_callback
         self._formatter: Formatter | None = formatter
 
@@ -146,7 +147,7 @@ class NtfyHandler(logging.Handler):
         for logging_level in default_level2priority:
             if logging_level not in self._level2priority:
                 msg_0 = (
-                    f"NtfyHandler, level2priority argument: missing mapping from "
+                    "NtfyHandler, level2priority argument: missing mapping from "
                     f"logging level {logging_level} to ntfy priority level"
                 )
                 raise ValueError(msg_0)

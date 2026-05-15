@@ -23,7 +23,7 @@ def test_flush_buffer_thread_success(tmp_path: Path):
     buffer._flusher_state["running"] = True
 
     with (
-        mock.patch("ntfy_lite.buffer.requests.put", return_value=MockResponse()) as mock_put,
+        mock.patch("ntfy_lite.buffer.requests.Session.put", return_value=MockResponse()) as mock_put,
         mock.patch("ntfy_lite.buffer.time.sleep"),
     ):
         buffer._flush_buffer_thread()
@@ -54,7 +54,7 @@ def test_flush_buffer_thread_429(tmp_path: Path):
     buffer._flusher_state["running"] = True
 
     with (
-        mock.patch("ntfy_lite.buffer.requests.put", return_value=MockResponse()) as mock_put,
+        mock.patch("ntfy_lite.buffer.requests.Session.put", return_value=MockResponse()) as mock_put,
         mock.patch("ntfy_lite.buffer.time.sleep") as mock_sleep,
     ):
         buffer._flush_buffer_thread()
@@ -86,7 +86,7 @@ def test_flush_buffer_thread_other_error(tmp_path: Path):
     buffer._flusher_state["running"] = True
 
     with (
-        mock.patch("ntfy_lite.buffer.requests.put", return_value=MockResponse()) as mock_put,
+        mock.patch("ntfy_lite.buffer.requests.Session.put", return_value=MockResponse()) as mock_put,
         mock.patch("ntfy_lite.buffer.time.sleep"),
     ):
         buffer._flush_buffer_thread()
@@ -113,7 +113,7 @@ def test_flush_buffer_thread_exception(tmp_path: Path):
     buffer._flusher_state["running"] = True
 
     with (
-        mock.patch("ntfy_lite.buffer.requests.put", side_effect=Exception("Test Error")) as mock_put,
+        mock.patch("ntfy_lite.buffer.requests.Session.put", side_effect=Exception("Test Error")) as mock_put,
         mock.patch("ntfy_lite.buffer.time.sleep"),
     ):
         buffer._flush_buffer_thread()
@@ -160,7 +160,7 @@ def test_flush_buffer_thread_batch_delete_exception(tmp_path: Path):
         return original_connect(*args, **kwargs)
 
     with (
-        mock.patch("ntfy_lite.buffer.requests.put", return_value=MockResponse()),
+        mock.patch("ntfy_lite.buffer.requests.Session.put", return_value=MockResponse()),
         mock.patch("ntfy_lite.buffer.time.sleep"),
         mock.patch("ntfy_lite.buffer.sqlite3.connect", side_effect=mocked_connect),
     ):
@@ -203,7 +203,7 @@ def test_flusher_handles_request_exception(tmp_path, monkeypatch, caplog):
     def mock_put(*args, **kwargs):
         raise requests.RequestException("Connection error")
 
-    monkeypatch.setattr(requests, "put", mock_put)
+    monkeypatch.setattr(requests.Session, "put", mock_put)
 
     db_path = tmp_path / "test_buffer.sqlite"
     buffer = NtfyBuffer(db_path)
@@ -255,3 +255,22 @@ def test_flusher_handles_json_decode_error(tmp_path, monkeypatch, caplog):
 
     assert not buffer._flusher_state["running"]
     assert "NTFY async flusher exception." in caplog.text
+
+
+def test_flush_buffer_thread_final_fallback(tmp_path: Path, caplog: pytest.LogCaptureFixture):
+    """Test the outer exception handler in _flush_buffer_thread."""
+    db_path = tmp_path / "test_fallback.sqlite"
+    with mock.patch("threading.Thread.start"):
+        buffer = NtfyBuffer(db_path)
+        buffer.add("topic", "url", "data", {"h": "v"})
+
+    buffer._flusher_state["running"] = True
+
+    with (
+        mock.patch.object(buffer, "_flush_row", side_effect=Exception("Final Fallback")),
+        caplog.at_level(logging.ERROR),
+    ):
+        buffer._flush_buffer_thread()
+
+    assert "NTFY async flusher final exception fallback" in caplog.text
+    assert not buffer._flusher_state["running"]
