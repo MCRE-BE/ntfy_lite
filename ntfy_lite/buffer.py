@@ -62,6 +62,7 @@ class NtfyBuffer:
         self.max_file_size = max_file_size
         self._flusher_lock = threading.Lock()
         self._flusher_state = {"running": False}
+        self._session = requests.Session()
         self._init_db()
         self._trigger_buffer_flush()
 
@@ -123,49 +124,88 @@ class NtfyBuffer:
            to ensure no infinite looping records.
         """
         try:
-            with sqlite3.connect(str(self.db_path), timeout=10) as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT id, topic, url, headers, data FROM buffer ORDER BY created_at ASC")
-                rows = cursor.fetchall()
-
-            to_delete = []
-
-            for row_id, topic, url, headers_json, data in rows:
-                try:
-                    headers = json.loads(headers_json)
-
-                    response = requests.put(f"{url}/{topic}", data=data, headers=headers, timeout=10)
-                    if response.ok:
-                        to_delete.append((row_id,))
-                        # Pause slightly between successful flushes to prevent hitting HTTP 429
-                        # rate limits when rapidly emptying a large buffer queue
-                        time.sleep(2)
-                    elif int(response.status_code) == 429:
-                        # Still rate limited; stop flushing so we don't spam the server further
-                        logging.warning("NTFY buffer fast retry rate limited (HTTP 429). Will stop flusher.")
-                        time.sleep(60)
-                        break
-                    else:
-                        # Some other failure, discard the buffered message and log the trace
-                        logging.error(
-                            f"NTFY async retry failed: {response.reason}. Discarding buffered message id {row_id}.",
-                        )
-                        to_delete.append((row_id,))
-                except (requests.RequestException, json.JSONDecodeError, Exception):
-                    logging.exception("NTFY async flusher exception.")
-                    break  # Wait for next import to retry
-
-            if to_delete:
+            # We process in batches to keep memory usage low while still benefiting
+            # from batch deletions and connection pooling.
+            while True:
+                rows = []
                 try:
                     with sqlite3.connect(str(self.db_path), timeout=10) as conn:
-                        conn.executemany("DELETE FROM buffer WHERE id = ?", to_delete)
+                        cursor = conn.cursor()
+                        cursor.execute(
+                            "SELECT id, topic, url, headers, data FROM buffer ORDER BY created_at ASC LIMIT 100",
+                        )
+                        rows = cursor.fetchall()
                 except (sqlite3.Error, Exception):
-                    logging.exception("Failed to batch delete buffered messages.")
-        except (sqlite3.Error, Exception):
+                    logging.exception("Failed to fetch from ntfy SQLite buffer")
+                    break
+
+                if not rows:
+                    break
+
+                to_delete = []
+                stop_flushing = False
+
+                for row in rows:
+                    row_done, stop_flushing = self._flush_row(row)
+                    if row_done:
+                        to_delete.append((row[0],))
+                    if stop_flushing:
+                        break
+
+                if to_delete:
+                    try:
+                        with sqlite3.connect(str(self.db_path), timeout=10) as conn:
+                            conn.executemany("DELETE FROM buffer WHERE id = ?", to_delete)
+                    except (sqlite3.Error, Exception):
+                        logging.exception("Failed to batch delete buffered messages.")
+                        break
+
+                if stop_flushing:
+                    break
+        except Exception:
             logging.exception("NTFY async flusher final exception fallback")
         finally:
             with self._flusher_lock:
                 self._flusher_state["running"] = False
+
+    def _flush_row(
+        self: Self,
+        row: tuple[int, str, str, str, str | bytes],
+    ) -> tuple[bool, bool]:
+        """Process a single buffered row.
+
+        Returns
+        -------
+        tuple[bool, bool]
+            (row_done, stop_flushing)
+            row_done: if True, the row should be deleted from the buffer.
+            stop_flushing: if True, the flusher should stop processing for now.
+        """
+        row_id, topic, url, headers_json, data = row
+        try:
+            headers = json.loads(headers_json)
+
+            response = self._session.put(f"{url}/{topic}", data=data, headers=headers, timeout=10)
+            if response.ok:
+                # Pause slightly between successful flushes to prevent hitting HTTP 429
+                # rate limits when rapidly emptying a large buffer queue
+                time.sleep(2)
+                return True, False
+            if int(response.status_code) == 429:
+                # Still rate limited; stop flushing so we don't spam the server further
+                logging.warning("NTFY buffer fast retry rate limited (HTTP 429). Will stop flusher.")
+                time.sleep(60)
+                return False, True
+
+            # Some other failure, discard the buffered message and log the trace
+            logging.error(
+                f"NTFY async retry failed: {response.reason}. Discarding buffered message id {row_id}.",
+            )
+        except (requests.RequestException, json.JSONDecodeError, Exception):
+            logging.exception("NTFY async flusher exception.")
+            return False, True
+
+        return True, False
 
     def _trigger_buffer_flush(self: Self) -> None:
         """Spawns the background synchronization thread if it isn't running already."""

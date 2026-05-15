@@ -190,7 +190,7 @@ def test_buffer_batch_delete_exception(tmp_path):
 
     with (
         mock.patch("sqlite3.connect", return_value=mock_conn),
-        mock.patch("ntfy_lite.buffer.requests.put") as mock_put,
+        mock.patch("ntfy_lite.buffer.requests.Session.put") as mock_put,
         mock.patch("logging.exception") as mock_log,
     ):
         mock_put.return_value.ok = True

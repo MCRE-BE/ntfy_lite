@@ -42,14 +42,14 @@ class FormatterPayload:
         self: Self,
         key: str,
         default: object = None,
-    ) -> typing.Any:  # noqa: ANN401
-        """Retrieve one of the defined fields from the dictionnary."""
-        return getattr(self, key, default)
+    ) -> typing.IO[typing.Any] | str | None:
+        """Retrieve one of the defined fields from the dictionary."""
+        return typing.cast("typing.IO[typing.Any] | str | None", getattr(self, key, default))
 
     def __getitem__(
         self: Self,
         key: str,
-    ) -> typing.Any:  # noqa: ANN401
+    ) -> typing.IO[typing.Any] | str | None:
         """Enable dataclass to be subscriptable."""
         return getattr(self, key, None)
 
@@ -73,6 +73,10 @@ class Formatter(abc.ABC):
         self.max_length = max_length
         self.truncation_message = truncation_message
         self._truncation_message_bytes = truncation_message.encode("utf-8")
+        self._truncation_message_safe = truncation_message.encode(
+            encoding="latin-1",
+            errors="replace",
+        ).decode(encoding="latin-1")
 
     def _default_payload(self: Self) -> FormatterPayload:
         return FormatterPayload(data="")
@@ -159,10 +163,7 @@ class EmptyFormatter(Formatter):
         result = self._default_payload()
 
         if len(msg_bytes) > self.max_length:
-            result["data"] = self.truncation_message.encode(
-                encoding="latin-1",
-                errors="replace",
-            ).decode(encoding="latin-1")
+            result["data"] = self._truncation_message_safe
         else:
             result["data"] = message.encode(
                 encoding="latin-1",
