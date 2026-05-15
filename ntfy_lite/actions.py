@@ -79,8 +79,8 @@ class Action(abc.ABC):
         str
             the quoted string.
         """
-        if any(c in value for c in (",", ";", '"')):
-            escaped = value.replace('"', '\\"')
+        if any(c in value for c in (",", ";", '"', "\\", "=")):
+            escaped = value.replace("\\", "\\\\").replace('"', '\\"')
             return f'"{escaped}"'
         return value
 

@@ -53,3 +53,23 @@ def test_action_quoting_double_quotes():
     res = str(action)
     # This will fail before the fix
     assert 'label="Label with \\"quotes\\""' in res
+
+
+def test_action_quoting_backslash_injection():
+    """Test that backslashes are escaped to prevent quote injection."""
+    # Input: label with backslash followed by quote
+    # If not escaped correctly, the \" could be interpreted as an escaped quote by the parser,
+    # but since our current code was just doing .replace('"', '\"'),
+    # '\"' becomes '\"' which if interpreted by ntfy might allow injection.
+    # More specifically, if the user provides `\"`, it becomes `\\"` after our new fix.
+    action = ViewAction('label\\", body=injected, dummy="', "https://example.com")
+    res = str(action)
+    # New fix should escape the backslash: label="label\\\", body=injected, dummy=\""
+    assert 'label="label\\\\\\", body=injected, dummy=\\""' in res
+
+
+def test_action_quoting_equal_sign():
+    """Test that equal signs trigger quoting."""
+    action = ViewAction("label=with_equal", "https://example.com")
+    res = str(action)
+    assert 'label="label=with_equal"' in res
