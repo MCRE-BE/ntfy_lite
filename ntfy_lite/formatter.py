@@ -72,6 +72,7 @@ class Formatter(abc.ABC):
     ) -> None:
         self.max_length = max_length
         self.truncation_message = truncation_message
+        self._truncation_message_bytes = truncation_message.encode("utf-8")
 
     def _default_payload(self: Self) -> FormatterPayload:
         return FormatterPayload(data="")
@@ -111,7 +112,7 @@ class AttachmentFormatter(Formatter):
         result = self._default_payload()
 
         if len(msg_bytes) > self.max_length:
-            trunc_msg_bytes = self.truncation_message.encode("utf-8")
+            trunc_msg_bytes = self._truncation_message_bytes
             available_length = self.max_length - len(trunc_msg_bytes)
 
             if available_length <= 0:
@@ -187,7 +188,7 @@ class TruncationFormatter(Formatter):
         result = self._default_payload()
 
         if len(msg_bytes) > self.max_length:
-            trunc_msg_bytes = self.truncation_message.encode("utf-8")
+            trunc_msg_bytes = self._truncation_message_bytes
             available_length = self.max_length - len(trunc_msg_bytes)
 
             if available_length <= 0:
