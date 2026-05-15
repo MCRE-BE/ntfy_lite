@@ -83,7 +83,7 @@ class Action(abc.ABC):
         value = value.replace("\n", " ").replace("\r", "")
 
         # 2. Check if we need quoting or escaping
-        if any(c in value for c in (",", ";", '"', "\\")):
+        if any(c in value for c in (",", ";", '"', "\\", "=")):
             # 3. Escape backslashes first, then quotes
             escaped = value.replace("\\", "\\\\").replace('"', '\\"')
             return f'"{escaped}"'
