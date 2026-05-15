@@ -34,14 +34,15 @@ from pathlib import Path
 
 if sys.version_info >= (3, 11):
     from typing import Self
-else:
+else:  # pragma: no cover
     from typing_extensions import Self
 try:
     from .buffer import NtfyBuffer
 
     _HAS_BUFFER = True
-except ImportError:
+except ImportError:  # pragma: no cover
     _HAS_BUFFER = False
+    NtfyBuffer: typing.Any = typing.Any  # type: ignore[assignment, misc]
 
 from .config import Priority, level2priority, level2tags
 from .config import level2priority as default_level2priority

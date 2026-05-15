@@ -255,3 +255,22 @@ def test_flusher_handles_json_decode_error(tmp_path, monkeypatch, caplog):
 
     assert not buffer._flusher_state["running"]
     assert "NTFY async flusher exception." in caplog.text
+
+
+def test_flush_buffer_thread_final_fallback(tmp_path: Path, caplog: pytest.LogCaptureFixture):
+    """Test the outer exception handler in _flush_buffer_thread."""
+    db_path = tmp_path / "test_fallback.sqlite"
+    with mock.patch("threading.Thread.start"):
+        buffer = NtfyBuffer(db_path)
+        buffer.add("topic", "url", "data", {"h": "v"})
+
+    buffer._flusher_state["running"] = True
+
+    with (
+        mock.patch.object(buffer, "_flush_row", side_effect=Exception("Final Fallback")),
+        caplog.at_level(logging.ERROR),
+    ):
+        buffer._flush_buffer_thread()
+
+    assert "NTFY async flusher final exception fallback" in caplog.text
+    assert not buffer._flusher_state["running"]

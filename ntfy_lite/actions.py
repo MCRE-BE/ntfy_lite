@@ -14,7 +14,7 @@ import typing
 
 if sys.version_info >= (3, 11):
     from typing import Self
-else:
+else:  # pragma: no cover
     from typing_extensions import Self
 from enum import Enum, auto
 

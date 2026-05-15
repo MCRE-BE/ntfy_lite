@@ -131,3 +131,20 @@ def test_truncation_formatter_long_unicode_message():
     assert result.filename_header is None
     assert result.file_to_close is None
     assert result.temp_file_path is None
+
+
+def test_formatter_payload_dict_access():
+    payload = EmptyFormatter()._default_payload()
+    payload.data = "test"
+
+    # Test __getitem__
+    assert payload["data"] == "test"
+    assert payload["non_existent"] is None
+
+    # Test get
+    assert payload.get("data") == "test"
+    assert payload.get("non_existent", "default") == "default"
+
+    # Test __setitem__
+    payload["data"] = "new"
+    assert payload.data == "new"

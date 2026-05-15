@@ -10,11 +10,12 @@ import sqlite3
 import sys
 import threading
 import time
+import typing
 from pathlib import Path
 
 if sys.version_info >= (3, 11):
     from typing import Self
-else:
+else:  # pragma: no cover
     from typing_extensions import Self
 
 import requests
@@ -93,7 +94,7 @@ class NtfyBuffer:
         topic: str,
         url: str,
         data: str | bytes,
-        headers: dict[str, str],
+        headers: typing.Mapping[str, str],
     ) -> None:
         """Stores the failed NTFY message in a local SQLite file to be retried asynchronously.
 
