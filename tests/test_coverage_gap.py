@@ -196,3 +196,48 @@ def test_buffer_batch_delete_exception(tmp_path):
         mock_put.return_value.ok = True
         buffer._flush_buffer_thread()
         mock_log.assert_called_with("Failed to batch delete buffered messages.")
+
+
+def test_handler_url_trailing_slash() -> None:
+    """Cover handler.py line 115 (warning and stripping of trailing slash in URL)."""
+    with pytest.warns(
+        expected_warning=UserWarning,
+        match="Trailing slash detected in NtfyHandler URL",
+    ):
+        handler = NtfyHandler(
+            "topic",
+            url="https://example.com/foo/",
+            db_path=False,
+        )
+    assert handler._url == "https://example.com/foo"
+
+
+def test_ntfy_push_url_none() -> None:
+    """Cover ntfy.py line 306 (url is None)."""
+    with mock.patch("ntfy_lite.ntfy._session.put") as mock_put:
+        mock_put.return_value.ok = True
+        push(
+            "topic",
+            "title",
+            message="msg",
+            url=None,
+        )
+        # Should default to https://ntfy.sh
+        assert mock_put.call_args[0][0] == "https://ntfy.sh/topic"
+
+
+def test_ntfy_push_url_trailing_slash() -> None:
+    """Cover ntfy.py line 310 (warning and stripping of trailing slash in push)."""
+    with mock.patch("ntfy_lite.ntfy._session.put") as mock_put:
+        mock_put.return_value.ok = True
+        with pytest.warns(
+            expected_warning=UserWarning,
+            match="Trailing slash detected in ntfy URL",
+        ):
+            push(
+                "topic",
+                "title",
+                message="msg",
+                url="https://example.com/bar/",
+            )
+        assert mock_put.call_args[0][0] == "https://example.com/bar/topic"
