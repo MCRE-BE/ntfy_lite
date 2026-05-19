@@ -12,6 +12,7 @@ import os
 import sys
 import traceback
 import typing
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -292,12 +293,27 @@ def push(
     at : str | None, optional
         to be used for delayed notification, see [scheduled delivery](https://ntfy.sh/docs/publish/#scheduled-delivery)
     url : str | None, optional
-        ntfy server
+        ntfy server.
+        Warning: don't leave a trailing / or ntfy_lite will send an empty topic to the server.
+        Example: ntfy.push("my topic", url="https://ntfy.sh/") will fail because it will try to send the
+        message to "https://ntfy.sh/" instead of "https://ntfy.sh/my topic".
     buffer : Any | None, optional
         Buffer object for retrying messages on HTTP 429
     formatter : Formatter | None, optional
         define how large payloads are formatted (e.g. TruncationFormatter or AttachmentFormatter)
     """
+    if url is None:
+        url = "https://ntfy.sh"
+
+    url_str = str(url)
+    if url_str.endswith("/"):
+        warnings.warn(
+            f"Trailing slash detected in ntfy URL ('{url_str}'). It was automatically stripped to prevent routing issues.",
+            UserWarning,
+            stacklevel=2,
+        )
+
+    url = url_str.rstrip("/")
 
     # the message manager handles files and long messages,
     # ensuring files are closed after sending.

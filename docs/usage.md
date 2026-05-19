@@ -37,3 +37,21 @@ ntfy-lite --help
 --8<-- "ntfy_lite/demo_logging.py"
 ```
 
+### Handling Long Tracebacks
+
+By default, `ntfy_lite` truncates long log messages (like stack traces) to fit the server's body limit. If you want a preview of the error in the notification body **and** the full traceback attached as a `.txt` file, use the `AttachmentFormatter`:
+
+```python
+import logging
+from ntfy_lite import NtfyHandler
+from ntfy_lite.formatter import AttachmentFormatter
+
+# Pass the AttachmentFormatter to your handler
+ntfy_handler = NtfyHandler(
+    topic="my_topic",
+    formatter=AttachmentFormatter()
+)
+
+logging.basicConfig(handlers=[ntfy_handler])
+logging.error("Something broke!", exc_info=True)
+```

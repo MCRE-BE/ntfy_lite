@@ -83,6 +83,9 @@ class NtfyHandler(logging.Handler):
             Topic on which the notifications will be pushed.
         url : str, optional
             https://ntfy.sh by default.
+            Warning: don't leave a trailing / or ntfy_lite will send an empty topic to the server.
+            Example: ntfy.push("my topic", url="https://ntfy.sh/") will fail because it will try to send the
+            message to "https://ntfy.sh/" instead of "https://ntfy.sh/my topic".
         twice_in_a_row : bool, optional
             If False, if several similar records (similar: same name and same message) are emitted, only the first one will result in notification being pushed (to avoid the channel to reach the accepted limits of notifications).
         error_callback : Callable[[Exception], Any] | None, optional
@@ -107,7 +110,14 @@ class NtfyHandler(logging.Handler):
 
         # ... Init ...
         super().__init__()
-        self._url: str = url
+        url_str = str(url)
+        if url_str.endswith("/"):
+            warnings.warn(
+                f"Trailing slash detected in NtfyHandler URL ('{url_str}'). It was automatically stripped to prevent routing issues.",
+                UserWarning,
+                stacklevel=2,
+            )
+        self._url: str = url_str.rstrip("/")
         self._topic: str = topic
         self._last_messages: dict[str, str] | None
         self._last_messages = None if twice_in_a_row else {}
